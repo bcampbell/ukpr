@@ -9,8 +9,9 @@ package main
 // consumers have a chance to catch up if they go down for a day or two.
 // (but for now, it just keeps adding to the db)
 //
+// Clients connect to:
 //
-// http://localhost:<port>/<source>/
+//   http://<host>:<port>/<source>/
 //
 // where source is (currently) one of:
 //   tesco
