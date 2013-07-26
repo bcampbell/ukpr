@@ -11,15 +11,15 @@ consumers have a chance to catch up if they go down for a day or two.
 
 Clients connect to:
 
-  http://<host>:<port>/<source>/
+    http://<host>:<port>/<source>/
 
 where source is (currently) one of:
-  tesco
-  72point
+    tesco
+    72point
 
 Clients can send a last-event-id header to access archived press releases.
 eg:
-  $ curl http://localhost:9998/72point/ -H "Last-Event-ID: 0"
+    $ curl http://localhost:9998/72point/ -H "Last-Event-ID: 0"
 Will serve up _all_ the stored 72point press releases.
 
 Without last-event-id, the client will be served only new press
