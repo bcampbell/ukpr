@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"code.google.com/p/cascadia"
 	"code.google.com/p/go.net/html"
-	"fmt"
-	rss "github.com/jteeuwen/go-pkg-rss"
-	//	"github.com/SlyMarbo/rss"
+	//"fmt"
 	"github.com/bcampbell/fuzzytime"
+	rss "github.com/jteeuwen/go-pkg-rss"
 	"net/url"
 	"regexp"
 	"strings"
@@ -21,6 +20,11 @@ func NewTescoScraper() *TescoScraper {
 	return &s
 }
 
+func (scraper *TescoScraper) Name() string {
+	return "tesco"
+}
+
+// fetches a list of latest press releases from tesco plc
 func (scraper *TescoScraper) FetchList() ([]*PressRelease, error) {
 	feed := rss.New(0, false, nil, nil)
 	// TODO: ensure this DOES NOT go through an http proxy!
@@ -41,7 +45,7 @@ func (scraper *TescoScraper) FetchList() ([]*PressRelease, error) {
 				return nil, err
 			}
 			if u.Host != "www.tescoplc.com" && u.Host != "tescoplc.com" {
-				fmt.Printf("SKIP %s\n", itemURL)
+				//fmt.Printf("SKIP %s\n", itemURL)
 				continue
 			}
 
@@ -49,7 +53,7 @@ func (scraper *TescoScraper) FetchList() ([]*PressRelease, error) {
 			if err != nil {
 				panic(err)
 			}
-			pr := PressRelease{Title: item.Title, Source: "tesco", Permalink: itemURL, PubDate: pubDate}
+			pr := PressRelease{Title: item.Title, Source: scraper.Name(), Permalink: itemURL, PubDate: pubDate}
 			docs = append(docs, &pr)
 		}
 	}

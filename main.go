@@ -1,9 +1,36 @@
 package main
 
+// This program runs a server which
+// 1) periodically scrapes a bunch of press release sources
+// 2) serves up those press releases as server side event endpoints
+//
+// The scraped press releases are persistant, in a sqlite db. The idea is
+// that eventually it'll be set up to keep just a week or so archive, to let
+// consumers have a chance to catch up if they go down for a day or two.
+// (but for now, it just keeps adding to the db)
+//
+//
+// http://localhost:<port>/<source>/
+//
+// where source is (currently) one of:
+//   tesco
+//   72point
+//
+// Clients can send a last-event-id header to access archived press releases.
+// eg:
+//  $ curl http://localhost:9998/72point/ -H "Last-Event-ID: 0"
+// Will serve up _all_ the stored 72point press releases.
+//
+// Without last-event-id, the client will be served only new press
+// releases as they come in.
+//
+//
 // TODOs
 // - proper logging and error handling (kill all the panics!)
-// - split up into separate packages
-//
+// - split up into separate packages (in particular, make it easy to build
+//   a new app with a diffferent bunch of scrapers)
+// - we've already got a http server running, so should implement a simple
+//   browsing interface for visual sanity-checking of press releases.
 
 import (
 	"fmt"
@@ -30,6 +57,8 @@ type PressRelease struct {
 
 // Scraper is the interface to implement to add a new scraper to the system
 type Scraper interface {
+	Name() string
+
 	// Fetch a list of 'current' press releases.
 	// (via RSS feed, or by scraping an index page or whatever)
 	// The results are passed back as PressRelease structs. At the very least,
@@ -65,15 +94,18 @@ func scrape(scraper Scraper, pr *PressRelease) error {
 	return nil
 }
 
-func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server, channel string) {
+// run a scraper
+func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
+
 	pressReleases, err := scraper.FetchList()
 	if err != nil {
 		panic(err)
 	}
 
 	// cull out the ones we've already got
+	oldCount := len(pressReleases)
 	pressReleases = store.WhichAreNew(pressReleases)
-	fmt.Printf("%d new releases\n", len(pressReleases))
+	log.Printf("%s: %d releases (%d new)", scraper.Name(), oldCount, len(pressReleases))
 	// for all the new ones:
 	for _, pr := range pressReleases {
 		if !pr.complete {
@@ -81,45 +113,52 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server, channel str
 			if err != nil {
 				panic(err)
 			}
+			pr.complete = true
 		}
 
-		fmt.Printf("stashing '%s'\n", pr.Title)
 		// stash the new press release
 		ev := store.Stash(pr)
-		sseSrv.Publish([]string{channel}, ev)
-		fmt.Printf("stashed %s: %s\n%s\n%s\n", ev.Id(), pr.Title, pr.PubDate, pr.Permalink)
+		log.Printf("%s: stashed %s", scraper.Name(), pr.Permalink)
+
+		// broadcast it to any connected clients
+		sseSrv.Publish([]string{pr.Source}, ev)
 	}
 }
 
 var port = flag.Int("port", 9998, "port to run server on")
-
-func testHandler(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "Hello\n")
-}
+var interval = flag.Int("interval", 60*10, "interval at which to poll source sites for new releases (in seconds)")
 
 func main() {
 	flag.Parse()
 
-	tescoScraper := NewTescoScraper()
-	tescoStore := NewStore("./tesco.db")
+	// using a common store for all scrapers
+	// but no reason they couldn't all have their own store
+	store := NewStore("./prstore.db")
 	sseSrv := eventsource.NewServer()
-	sseSrv.Register("tesco", tescoStore)
 
-	http.HandleFunc("/test", testHandler)
+	// TODO: make this setup driven by a table for easier scraper-wrangling
+	tescoScraper := NewTescoScraper()
+	sseSrv.Register("tesco", store)
 	http.Handle("/tesco/", sseSrv.Handler("tesco"))
 
+	seventyTwoPointScraper := NewSeventyTwoPointScraper()
+	sseSrv.Register("72point", store)
+	http.Handle("/72point/", sseSrv.Handler("72point"))
+
+	//
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		panic(err) //glog.Fatal(err)
 	}
 	defer l.Close()
-	fmt.Printf("running.\n")
 	log.Printf("running on port %d", *port)
 
+	// cheesy task to periodically run the scrapers
 	go func() {
 		for {
-			time.Sleep(5 * time.Second)
-			doit(tescoScraper, tescoStore, sseSrv, "tesco") // every hour or so :-)
+			doit(seventyTwoPointScraper, store, sseSrv)
+			doit(tescoScraper, store, sseSrv)
+			time.Sleep(time.Duration(*interval) * time.Second)
 		}
 	}()
 

@@ -4,6 +4,17 @@ import (
 	"code.google.com/p/go.net/html"
 )
 
+// getAttr retrieved the value of an attribute on a node.
+// Returns empty string if attribute doesn't exist.
+func getAttr(n *html.Node, attr string) string {
+	for _, a := range n.Attr {
+		if a.Key == attr {
+			return a.Val
+		}
+	}
+	return ""
+}
+
 // getTextContent recursively fetches the text for a node
 func getTextContent(n *html.Node) string {
 	if n.Type == html.TextNode {
