@@ -19,7 +19,9 @@ where source is (currently) one of:
 
 Clients can send a last-event-id header to access archived press releases.
 eg:
+
     $ curl http://localhost:9998/72point/ -H "Last-Event-ID: 0"
+
 Will serve up _all_ the stored 72point press releases.
 
 Without last-event-id, the client will be served only new press
