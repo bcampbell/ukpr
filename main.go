@@ -128,23 +128,54 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 
 var port = flag.Int("port", 9998, "port to run server on")
 var interval = flag.Int("interval", 60*10, "interval at which to poll source sites for new releases (in seconds)")
+var testScraper = flag.String("t", "", "Test an individual scraper")
+var listFlag = flag.Bool("l", false, "List scrapers")
 
 func main() {
 	flag.Parse()
 
+	scrapers := make(map[string]Scraper)
+
+	foo := [...]Scraper{
+		NewTescoScraper(),
+		NewSeventyTwoPointScraper(),
+	}
+	for _, scraper := range foo {
+		name := scraper.Name()
+		scrapers[name] = scraper
+	}
+
+	if *listFlag {
+		for name, _ := range scrapers {
+			fmt.Println(name)
+		}
+		return
+	}
+
+	if *testScraper != "" {
+		scraper, ok := scrapers[*testScraper]
+		if !ok {
+			log.Fatal("Unknown scraper")
+		}
+		pressReleases, err := scraper.FetchList()
+		if err != nil {
+			panic(err)
+		}
+		for _, pr := range pressReleases {
+			fmt.Println(pr.Permalink)
+		}
+		return
+	}
+
+	// set up as server
 	// using a common store for all scrapers
 	// but no reason they couldn't all have their own store
 	store := NewStore("./prstore.db")
 	sseSrv := eventsource.NewServer()
-
-	// TODO: make this setup driven by a table for easier scraper-wrangling
-	tescoScraper := NewTescoScraper()
-	sseSrv.Register("tesco", store)
-	http.Handle("/tesco/", sseSrv.Handler("tesco"))
-
-	seventyTwoPointScraper := NewSeventyTwoPointScraper()
-	sseSrv.Register("72point", store)
-	http.Handle("/72point/", sseSrv.Handler("72point"))
+	for name, _ := range scrapers {
+		sseSrv.Register(name, store)
+		http.Handle("/"+name+"/", sseSrv.Handler(name))
+	}
 
 	//
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
@@ -152,16 +183,17 @@ func main() {
 		panic(err) //glog.Fatal(err)
 	}
 	defer l.Close()
-	log.Printf("running on port %d", *port)
 
 	// cheesy task to periodically run the scrapers
 	go func() {
 		for {
-			doit(seventyTwoPointScraper, store, sseSrv)
-			doit(tescoScraper, store, sseSrv)
+			for _, scraper := range scrapers {
+				doit(scraper, store, sseSrv)
+			}
 			time.Sleep(time.Duration(*interval) * time.Second)
 		}
 	}()
 
+	log.Printf("running on port %d", *port)
 	http.Serve(l, nil)
 }

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"code.google.com/p/cascadia"
 	"code.google.com/p/go.net/html"
+	"net/http"
 )
 
 // getAttr retrieved the value of an attribute on a node.
@@ -37,4 +39,25 @@ func contains(container *html.Node, n *html.Node) bool {
 		}
 	}
 	return false
+}
+
+// GenericFetchList extracts links from a given page.
+func GenericFetchList(scraperName, url, linkSelector string) ([]*PressRelease, error) {
+	linkSel := cascadia.MustCompile(linkSelector)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	root, err := html.Parse(resp.Body)
+	if err != nil {
+		return nil, err // TODO: wrap up as ScrapeError?
+	}
+	docs := make([]*PressRelease, 0)
+	for _, a := range linkSel.MatchAll(root) {
+		link := getAttr(a, "href")
+		pr := PressRelease{Source: scraperName, Permalink: link}
+		docs = append(docs, &pr)
+	}
+	return docs, nil
 }

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"code.google.com/p/cascadia"
 	"code.google.com/p/go.net/html"
-	"net/http"
-
 	"github.com/bcampbell/fuzzytime"
 	"strings"
 )
@@ -22,30 +20,14 @@ func (scraper *SeventyTwoPointScraper) Name() string {
 	return "72point"
 }
 
-// fetches a list of latest press releases from tesco plc
+// fetches a list of latest press releases from 72point
 func (scraper *SeventyTwoPointScraper) FetchList() ([]*PressRelease, error) {
 	// (could also access archives, about 160 pages
 	// eg    http://www.72point.com/coverage/page/2/)
-	resp, err := http.Get("http://www.72point.com/coverage/")
-	linkSel := cascadia.MustCompile(".items .item .content .links a")
 
-	// the rest of this should be snipped out into a helper function.
-	// Most scrapers can probably just use this as-is.
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	root, err := html.Parse(resp.Body)
-	if err != nil {
-		return nil, err // TODO: wrap up as ScrapeError?
-	}
-	docs := make([]*PressRelease, 0)
-	for _, a := range linkSel.MatchAll(root) {
-		link := getAttr(a, "href")
-		pr := PressRelease{Source: scraper.Name(), Permalink: link}
-		docs = append(docs, &pr)
-	}
-	return docs, nil
+	url := "http://www.72point.com/coverage/"
+	sel := ".items .item .content .links a"
+	return GenericFetchList(scraper.Name(), url, sel)
 }
 
 func (scraper *SeventyTwoPointScraper) Scrape(pr *PressRelease, raw_html string) error {
