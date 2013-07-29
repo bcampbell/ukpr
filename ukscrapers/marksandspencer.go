@@ -1,7 +1,7 @@
-package main
+package ukscrapers
 
 import (
-//	"errors"
+	"github.com/bcampbell/ukpr/prscrape"
 )
 
 // scraper to grab MarksAndSpencer press releases
@@ -17,17 +17,17 @@ func (scraper *MarksAndSpencerScraper) Name() string {
 }
 
 // fetches a list of latest press releases from MarksAndSpencer
-func (scraper *MarksAndSpencerScraper) FetchList() ([]*PressRelease, error) {
+func (scraper *MarksAndSpencerScraper) FetchList() ([]*prscrape.PressRelease, error) {
 	url := "http://corporate.marksandspencer.com/media/press_releases"
 	sel := "#press-releases .item h2 a"
-	return GenericFetchList(scraper.Name(), url, sel)
+	return prscrape.GenericFetchList(scraper.Name(), url, sel)
 }
 
-func (scraper *MarksAndSpencerScraper) Scrape(pr *PressRelease, raw_html string) error {
+func (scraper *MarksAndSpencerScraper) Scrape(pr *prscrape.PressRelease, raw_html string) error {
 	title := "#main h2"
 	content := "#pr_article"
 	// TODO: kill everything after: "-ENDS-"
 	cruft := "p.back-top, p.reference"
 	pubDate := "#main" // TODO: a more specific selector would be nice!
-	return GenericScrape(scraper.Name(), pr, raw_html, title, content, cruft, pubDate)
+	return prscrape.GenericScrape(scraper.Name(), pr, raw_html, title, content, cruft, pubDate)
 }

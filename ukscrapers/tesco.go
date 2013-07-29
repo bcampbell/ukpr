@@ -1,4 +1,4 @@
-package main
+package ukscrapers
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"code.google.com/p/go.net/html"
 	//"fmt"
 	"github.com/bcampbell/fuzzytime"
+	"github.com/bcampbell/ukpr/prscrape"
 	rss "github.com/jteeuwen/go-pkg-rss"
 	"net/url"
 	"regexp"
@@ -25,7 +26,7 @@ func (scraper *TescoScraper) Name() string {
 }
 
 // fetches a list of latest press releases from tesco plc
-func (scraper *TescoScraper) FetchList() ([]*PressRelease, error) {
+func (scraper *TescoScraper) FetchList() ([]*prscrape.PressRelease, error) {
 	feed := rss.New(0, false, nil, nil)
 	// TODO: ensure this DOES NOT go through an http proxy!
 	// (use FetchClient)
@@ -34,7 +35,7 @@ func (scraper *TescoScraper) FetchList() ([]*PressRelease, error) {
 		return nil, err
 	}
 
-	docs := make([]*PressRelease, 0)
+	docs := make([]*prscrape.PressRelease, 0)
 	for _, channel := range feed.Channels {
 		for _, item := range channel.Items {
 			//	fmt.Printf("%s '%s' %v\n", item.Link, item.Title, item.Date)
@@ -49,18 +50,18 @@ func (scraper *TescoScraper) FetchList() ([]*PressRelease, error) {
 				continue
 			}
 
-			pubDate, err := parseTime(item.PubDate)
+			pubDate, err := prscrape.ParseTime(item.PubDate)
 			if err != nil {
 				panic(err)
 			}
-			pr := PressRelease{Title: item.Title, Source: scraper.Name(), Permalink: itemURL, PubDate: pubDate}
+			pr := prscrape.PressRelease{Title: item.Title, Source: scraper.Name(), Permalink: itemURL, PubDate: pubDate}
 			docs = append(docs, &pr)
 		}
 	}
 	return docs, nil
 }
 
-func (scraper *TescoScraper) Scrape(pr *PressRelease, raw_html string) error {
+func (scraper *TescoScraper) Scrape(pr *prscrape.PressRelease, raw_html string) error {
 	r := strings.NewReader(string(raw_html))
 	root, err := html.Parse(r)
 	if err != nil {
@@ -81,10 +82,10 @@ func (scraper *TescoScraper) Scrape(pr *PressRelease, raw_html string) error {
 	div := containerSel.MatchAll(root)[0]
 
 	// get the title
-	pr.Title = getTextContent(titleSel.MatchAll(div)[0])
+	pr.Title = prscrape.GetTextContent(titleSel.MatchAll(div)[0])
 
 	//
-	dateTxt := getTextContent(dateSel.MatchAll(div)[0])
+	dateTxt := prscrape.GetTextContent(dateSel.MatchAll(div)[0])
 	pr.PubDate, err = fuzzytime.Parse(dateTxt)
 	if err != nil {
 		return err

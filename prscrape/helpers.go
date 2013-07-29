@@ -1,4 +1,6 @@
-package main
+package prscrape
+
+// generic scraping functions for PR scrapers to use
 
 import (
 	"bytes"
@@ -7,56 +9,11 @@ import (
 	"github.com/bcampbell/fuzzytime"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 )
 
-// getAttr retrieved the value of an attribute on a node.
-// Returns empty string if attribute doesn't exist.
-func getAttr(n *html.Node, attr string) string {
-	for _, a := range n.Attr {
-		if a.Key == attr {
-			return a.Val
-		}
-	}
-	return ""
-}
-
-// getTextContent recursively fetches the text for a node
-func getTextContent(n *html.Node) string {
-	if n.Type == html.TextNode {
-		return n.Data
-	}
-	txt := ""
-	for child := n.FirstChild; child != nil; child = child.NextSibling {
-		txt += getTextContent(child)
-	}
-
-	return txt
-}
-
-// contains returns true if is a descendant of container
-func contains(container *html.Node, n *html.Node) bool {
-	n = n.Parent
-	for ; n != nil; n = n.Parent {
-		if n == container {
-			return true
-		}
-	}
-	return false
-}
-
-// compressSpace reduces all whitespace sequences (space, tabs, newlines etc) in a string to a single space.
-// Leading/trailing space is trimmed.
-// Has the effect of converting multiline strings to one line.
-func compressSpace(s string) string {
-	multispacePat := regexp.MustCompile(`[\s]+`)
-	s = strings.TrimSpace(multispacePat.ReplaceAllLiteralString(s, " "))
-	return s
-}
-
-// GenericFetchList extracts links from a given page.
+// GenericFetchList fetches a page, and extracts matching links.
 func GenericFetchList(scraperName, pageUrl, linkSelector string) ([]*PressRelease, error) {
 	page, err := url.Parse(pageUrl)
 	if err != nil {
@@ -75,7 +32,7 @@ func GenericFetchList(scraperName, pageUrl, linkSelector string) ([]*PressReleas
 	}
 	docs := make([]*PressRelease, 0)
 	for _, a := range linkSel.MatchAll(root) {
-		link, err := page.Parse(getAttr(a, "href")) // extend to absolute url if needed
+		link, err := page.Parse(GetAttr(a, "href")) // extend to absolute url if needed
 		if err != nil {
 			// TODO: log a warning?
 			continue
@@ -86,7 +43,7 @@ func GenericFetchList(scraperName, pageUrl, linkSelector string) ([]*PressReleas
 	return docs, nil
 }
 
-// scrape a press release based on a bunch of css selector strings
+// GenericScrape scrapes a press release from raw_html based on a bunch of css selector strings
 func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cruft, pubDate string) error {
 	titleSel := cascadia.MustCompile(title)
 	contentSel := cascadia.MustCompile(content)
@@ -100,13 +57,13 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 	pr.Source = source
 
 	// title
-	pr.Title = compressSpace(getTextContent(titleSel.MatchAll(root)[0]))
+	pr.Title = CompressSpace(GetTextContent(titleSel.MatchAll(root)[0]))
 
 	// pubdate - only needs to contain a valid date string, doesn't matter
 	// if there's other crap in there too.
 	if pubDate != "" {
 		pubDateSel := cascadia.MustCompile(pubDate)
-		dateTxt := getTextContent(pubDateSel.MatchAll(root)[0])
+		dateTxt := GetTextContent(pubDateSel.MatchAll(root)[0])
 		pr.PubDate, err = fuzzytime.Parse(dateTxt)
 		if err != nil {
 			return err
