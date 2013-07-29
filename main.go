@@ -148,6 +148,7 @@ func main() {
 		NewMarksAndSpencerScraper(),
 		NewSainsburysScraper(),
 		NewMorrisonsScraper(),
+		NewCooperativeScraper(),
 	}
 	for _, scraper := range foo {
 		name := scraper.Name()
@@ -173,6 +174,7 @@ func main() {
 		}
 		for _, pr := range pressReleases {
 			if !pr.complete {
+				log.Printf("%s: scrape %s", scraper.Name(), pr.Permalink)
 				err = scrape(scraper, pr)
 				if err != nil {
 					log.Printf("ERROR '%s' %s\n", err, pr.Permalink)

@@ -97,20 +97,7 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 		return err // TODO: wrap up as ScrapeError?
 	}
 
-	// content
-	contentEl := contentSel.MatchAll(root)[0]
-	if cruft != "" {
-		cruftSel := cascadia.MustCompile(cruft)
-		for _, cruft := range cruftSel.MatchAll(contentEl) {
-			cruft.Parent.RemoveChild(cruft)
-		}
-	}
-	var out bytes.Buffer
-	err = html.Render(&out, contentEl)
-	if err != nil {
-		return err
-	}
-	pr.Content = out.String()
+	pr.Source = source
 
 	// title
 	pr.Title = compressSpace(getTextContent(titleSel.MatchAll(root)[0]))
@@ -130,6 +117,20 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 			pr.PubDate = time.Now()
 		}
 	}
-	pr.Source = source
+
+	// content
+	contentEl := contentSel.MatchAll(root)[0]
+	if cruft != "" {
+		cruftSel := cascadia.MustCompile(cruft)
+		for _, cruft := range cruftSel.MatchAll(contentEl) {
+			cruft.Parent.RemoveChild(cruft)
+		}
+	}
+	var out bytes.Buffer
+	err = html.Render(&out, contentEl)
+	if err != nil {
+		return err
+	}
+	pr.Content = out.String()
 	return nil
 }
