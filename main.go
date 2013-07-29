@@ -29,9 +29,11 @@ package main
 // TODOs
 // - proper logging and error handling (kill all the panics!)
 // - split up into separate packages (in particular, make it easy to build
-//   a new app with a diffferent bunch of scrapers)
+//   a new app with a different bunch of scrapers)
 // - we've already got a http server running, so should implement a simple
 //   browsing interface for visual sanity-checking of press releases.
+// - add a html-scrubbing func to clean up extracted content (remove style
+//   attrs, ids, dodgy elements etc)
 
 import (
 	"fmt"
@@ -112,7 +114,8 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 		if !pr.complete {
 			err = scrape(scraper, pr)
 			if err != nil {
-				panic(err)
+				log.Printf("ERROR '%s' %s\n", err, pr.Permalink)
+				continue
 			}
 			pr.complete = true
 		}
@@ -129,6 +132,7 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 var port = flag.Int("port", 9998, "port to run server on")
 var interval = flag.Int("interval", 60*10, "interval at which to poll source sites for new releases (in seconds)")
 var testScraper = flag.String("t", "", "Test an individual scraper")
+var briefFlag = flag.Bool("b", false, "Brief (testing mode output)")
 var listFlag = flag.Bool("l", false, "List scrapers")
 
 func main() {
@@ -139,6 +143,11 @@ func main() {
 	foo := [...]Scraper{
 		NewTescoScraper(),
 		NewSeventyTwoPointScraper(),
+		NewAsdaScraper(),
+		NewWaitroseScraper(),
+		NewMarksAndSpencerScraper(),
+		NewSainsburysScraper(),
+		NewMorrisonsScraper(),
 	}
 	for _, scraper := range foo {
 		name := scraper.Name()
@@ -153,6 +162,7 @@ func main() {
 	}
 
 	if *testScraper != "" {
+		// run a single scraper, without server or store
 		scraper, ok := scrapers[*testScraper]
 		if !ok {
 			log.Fatal("Unknown scraper")
@@ -162,7 +172,23 @@ func main() {
 			panic(err)
 		}
 		for _, pr := range pressReleases {
-			fmt.Println(pr.Permalink)
+			if !pr.complete {
+				err = scrape(scraper, pr)
+				if err != nil {
+					log.Printf("ERROR '%s' %s\n", err, pr.Permalink)
+					continue
+				}
+				pr.complete = true
+			}
+
+			if !*briefFlag {
+				fmt.Printf("%s\n %s\n %s\n", pr.Title, pr.PubDate, pr.Permalink)
+				fmt.Println("")
+				fmt.Println(pr.Content)
+				fmt.Println("------------------------------")
+			} else {
+				fmt.Printf("%s %s\n", pr.Title, pr.Permalink)
+			}
 		}
 		return
 	}
