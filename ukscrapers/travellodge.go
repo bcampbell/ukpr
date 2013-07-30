@@ -1,7 +1,5 @@
 package ukscrapers
 
-// TODO: TravelLodge cms is really messed up. Scraper needs some more work.
-
 import (
 	//	"errors"
 	"github.com/bcampbell/ukpr/prscrape"

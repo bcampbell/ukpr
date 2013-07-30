@@ -29,6 +29,8 @@ func main() {
 		uk.NewVirginMoneyScraper(),
 		// Hotels
 		uk.NewTravelLodgeScraper(),
+		// Culture
+		uk.NewTateScraper(),
 	}
 	prscrape.ServerMain(scrapers[:])
 }
