@@ -7,11 +7,11 @@ import (
 // PressRelease is the data we're scraping and storing.
 // TODO: support multiple urls
 type PressRelease struct {
-	Title     string
-	Source    string
-	Permalink string
-	PubDate   time.Time
-	Content   string
+	Title     string    `json:"title"`
+	Source    string    `json:"source"`
+	Permalink string    `json:"permalink"`
+	PubDate   time.Time `json:"published"`
+	Content   string    `json:"text"`
 	// if this is a fully-filled out press release, complete is set
 	complete bool
 }
