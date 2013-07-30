@@ -76,18 +76,23 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 	}
 
 	// content
-	contentEl := contentSel.MatchAll(root)[0]
+	contentElements := contentSel.MatchAll(root)
 	if cruft != "" {
 		cruftSel := cascadia.MustCompile(cruft)
-		for _, cruft := range cruftSel.MatchAll(contentEl) {
-			cruft.Parent.RemoveChild(cruft)
+		for _, el := range contentElements {
+			for _, cruft := range cruftSel.MatchAll(el) {
+				cruft.Parent.RemoveChild(cruft)
+			}
 		}
 	}
 	var out bytes.Buffer
-	err = html.Render(&out, contentEl)
-	if err != nil {
-		return err
+	for _, el := range contentElements {
+		err = html.Render(&out, el)
+		if err != nil {
+			return err
+		}
 	}
+
 	pr.Content = out.String()
 	return nil
 }
