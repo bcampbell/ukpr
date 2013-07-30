@@ -87,6 +87,7 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 	}
 	var out bytes.Buffer
 	for _, el := range contentElements {
+		StripComments(el)
 		err = html.Render(&out, el)
 		if err != nil {
 			return err

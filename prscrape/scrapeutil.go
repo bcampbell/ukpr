@@ -4,6 +4,7 @@ package prscrape
 
 import (
 	"code.google.com/p/go.net/html"
+	//"fmt"
 	"regexp"
 	"strings"
 )
@@ -50,4 +51,18 @@ func CompressSpace(s string) string {
 	multispacePat := regexp.MustCompile(`[\s]+`)
 	s = strings.TrimSpace(multispacePat.ReplaceAllLiteralString(s, " "))
 	return s
+}
+
+func StripComments(n *html.Node) {
+	if n.Type == html.CommentNode {
+		n.Parent.RemoveChild(n)
+		return
+	}
+
+	child := n.FirstChild
+	for child != nil {
+		next := child.NextSibling
+		StripComments(child)
+		child = next
+	}
 }
