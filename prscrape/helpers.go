@@ -45,8 +45,6 @@ func GenericFetchList(scraperName, pageUrl, linkSelector string) ([]*PressReleas
 
 // GenericScrape scrapes a press release from raw_html based on a bunch of css selector strings
 func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cruft, pubDate string) error {
-	titleSel := cascadia.MustCompile(title)
-	contentSel := cascadia.MustCompile(content)
 
 	r := strings.NewReader(string(raw_html))
 	root, err := html.Parse(r)
@@ -57,6 +55,7 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 	pr.Source = source
 
 	// title
+	titleSel := cascadia.MustCompile(title)
 	pr.Title = CompressSpace(GetTextContent(titleSel.MatchAll(root)[0]))
 
 	// pubdate - only needs to contain a valid date string, doesn't matter
@@ -76,6 +75,7 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 	}
 
 	// content
+	contentSel := cascadia.MustCompile(content)
 	contentElements := contentSel.MatchAll(root)
 	if cruft != "" {
 		cruftSel := cascadia.MustCompile(cruft)

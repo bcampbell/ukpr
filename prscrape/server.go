@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/donovanhide/eventsource"
 	//	"github.com/gorilla/mux"
+	"errors"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -13,24 +14,34 @@ import (
 )
 
 // helper to fetch and scrape an individual press release
-func scrape(scraper Scraper, pr *PressRelease) error {
+func scrape(scraper Scraper, pr *PressRelease) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(fmt.Sprintf("%v", e))
+		}
+	}()
 	resp, err := http.Get(pr.Permalink)
 	if err != nil {
-		return err
+		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		err = errors.New(fmt.Sprintf("HTTP error %d", resp.StatusCode))
+		return
+	}
 	html, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return
 	}
 
 	// TODO: collect redirects
 
 	err = scraper.Scrape(pr, string(html))
 	if err != nil {
-		return err
+		return
 	}
-	return nil
+	return
 }
 
 // run a scraper
@@ -106,10 +117,10 @@ func ServerMain(scraperList []Scraper) {
 		}
 		for _, pr := range pressReleases {
 			if !pr.complete {
-				log.Printf("%s: scrape %s", scraper.Name(), pr.Permalink)
+				//log.Printf("%s: scrape %s", scraper.Name(), pr.Permalink)
 				err = scrape(scraper, pr)
 				if err != nil {
-					log.Printf("ERROR '%s' %s\n", err, pr.Permalink)
+					log.Printf("%s: ERROR '%s' %s\n", scraper.Name(), err, pr.Permalink)
 					continue
 				}
 				pr.complete = true

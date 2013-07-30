@@ -14,6 +14,7 @@ import (
 
 func main() {
 	scrapers := [...]prscrape.Scraper{
+		// supermarkets
 		uk.NewTescoScraper(),
 		uk.NewSeventyTwoPointScraper(),
 		uk.NewAsdaScraper(),
@@ -22,7 +23,9 @@ func main() {
 		uk.NewSainsburysScraper(),
 		uk.NewMorrisonsScraper(),
 		uk.NewCooperativeScraper(),
+		// banks
 		uk.NewBarclaysScraper(),
+		//		uk.NewRBSScraper(), // needs more work!
 	}
 	prscrape.ServerMain(scrapers[:])
 }
