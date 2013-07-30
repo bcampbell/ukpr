@@ -26,6 +26,7 @@ func main() {
 		// banks
 		uk.NewBarclaysScraper(),
 		//		uk.NewRBSScraper(), // needs more work!
+		uk.NewVirginMoneyScraper(),
 	}
 	prscrape.ServerMain(scrapers[:])
 }
