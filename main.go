@@ -22,6 +22,7 @@ func main() {
 		uk.NewSainsburysScraper(),
 		uk.NewMorrisonsScraper(),
 		uk.NewCooperativeScraper(),
+		uk.NewBarclaysScraper(),
 	}
 	prscrape.ServerMain(scrapers[:])
 }
