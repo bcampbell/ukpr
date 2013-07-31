@@ -3,7 +3,7 @@ package prscrape
 // generic scraping functions for PR scrapers to use
 
 import (
-	"bytes"
+	//	"bytes"
 	"code.google.com/p/cascadia"
 	"code.google.com/p/go.net/html"
 	"github.com/bcampbell/fuzzytime"
@@ -85,15 +85,19 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 			}
 		}
 	}
-	var out bytes.Buffer
+
+	//var out bytes.Buffer
+	pr.Content = ""
 	for _, el := range contentElements {
 		StripComments(el)
-		err = html.Render(&out, el)
+
+		pr.Content += GetTextContent(el)
+		/*err = html.Render(&out, el)
 		if err != nil {
 			return err
 		}
+		*/
 	}
-
-	pr.Content = out.String()
+	//pr.Content = out.String()
 	return nil
 }
