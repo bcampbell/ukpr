@@ -6,6 +6,8 @@ import (
 	//	"bytes"
 	"code.google.com/p/cascadia"
 	"code.google.com/p/go.net/html"
+	"errors"
+	"fmt"
 	"github.com/bcampbell/fuzzytime"
 	"net/http"
 	"net/url"
@@ -17,18 +19,26 @@ import (
 func GenericFetchList(scraperName, pageUrl, linkSelector string) ([]*PressRelease, error) {
 	page, err := url.Parse(pageUrl)
 	if err != nil {
-		return nil, err // TODO: wrap up as ScrapeError?
+		return nil, err
 	}
 
-	linkSel := cascadia.MustCompile(linkSelector)
+	linkSel, err := cascadia.Compile(linkSelector)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := http.Get(pageUrl)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		err = errors.New(fmt.Sprintf("HTTP code %d (%s)", resp.StatusCode, pageUrl))
+		return nil, err
+	}
+
 	root, err := html.Parse(resp.Body)
 	if err != nil {
-		return nil, err // TODO: wrap up as ScrapeError?
+		return nil, err
 	}
 	docs := make([]*PressRelease, 0)
 	for _, a := range linkSel.MatchAll(root) {
@@ -55,13 +65,19 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 	pr.Source = source
 
 	// title
-	titleSel := cascadia.MustCompile(title)
+	titleSel, err := cascadia.Compile(title)
+	if err != nil {
+		return err
+	}
 	pr.Title = CompressSpace(GetTextContent(titleSel.MatchAll(root)[0]))
 
 	// pubdate - only needs to contain a valid date string, doesn't matter
 	// if there's other crap in there too.
 	if pubDate != "" {
-		pubDateSel := cascadia.MustCompile(pubDate)
+		pubDateSel, err := cascadia.Compile(pubDate)
+		if err != nil {
+			return err
+		}
 		dateTxt := GetTextContent(pubDateSel.MatchAll(root)[0])
 		pr.PubDate, err = fuzzytime.Parse(dateTxt)
 		if err != nil {
@@ -75,10 +91,16 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 	}
 
 	// content
-	contentSel := cascadia.MustCompile(content)
+	contentSel, err := cascadia.Compile(content)
+	if err != nil {
+		return err
+	}
 	contentElements := contentSel.MatchAll(root)
 	if cruft != "" {
-		cruftSel := cascadia.MustCompile(cruft)
+		cruftSel, err := cascadia.Compile(cruft)
+		if err != nil {
+			return err
+		}
 		for _, el := range contentElements {
 			for _, cruft := range cruftSel.MatchAll(el) {
 				cruft.Parent.RemoveChild(cruft)

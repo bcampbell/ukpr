@@ -78,17 +78,17 @@ func (store *Store) WhichAreNew(incoming []*PressRelease) []*PressRelease {
 }
 
 // Stash adds a press release into the store
-func (store *Store) Stash(pr *PressRelease) *pressReleaseEvent {
+func (store *Store) Stash(pr *PressRelease) (*pressReleaseEvent, error) {
 
 	res, err := store.db.Exec("INSERT INTO press_release (title,source,permalink,pubdate,content) VALUES ($1,$2,$3,$4,$5)", pr.Title, pr.Source, pr.Permalink, pr.PubDate, pr.Content)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &pressReleaseEvent{pr, int(id)}
+	return &pressReleaseEvent{pr, int(id)}, nil
 }
 
 // Get to help handle last-event-id catchups

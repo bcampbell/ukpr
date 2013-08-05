@@ -27,7 +27,7 @@ func scrape(scraper Scraper, pr *PressRelease) (err error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		err = errors.New(fmt.Sprintf("HTTP error %d", resp.StatusCode))
+		err = errors.New(fmt.Sprintf("HTTP code %d (%s)", resp.StatusCode, pr.Permalink))
 		return
 	}
 	html, err := ioutil.ReadAll(resp.Body)
@@ -68,8 +68,12 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 		}
 
 		// stash the new press release
-		ev := store.Stash(pr)
-		log.Printf("%s: stashed %s", scraper.Name(), pr.Permalink)
+		ev, err := store.Stash(pr)
+		if err != nil {
+			log.Printf("%s: ERROR stashing %s (%s)", scraper.Name(), pr.Permalink, err)
+		} else {
+			log.Printf("%s: stashed %s", scraper.Name(), pr.Permalink)
+		}
 
 		// broadcast it to any connected clients
 		sseSrv.Publish([]string{pr.Source}, ev)
