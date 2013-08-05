@@ -1,7 +1,5 @@
 package prscrape
 
-// generic scraping functions for PR scrapers to use
-
 import (
 	//	"bytes"
 	"code.google.com/p/cascadia"
@@ -14,6 +12,41 @@ import (
 	"strings"
 	"time"
 )
+
+// DefaultScraper is a Scraper implementation to handle most common cases.
+// It uses CSS selectors to identify the relevant data to extract from a page.
+type DefaultScraper struct {
+	ScraperName string
+
+	// IndexURL is page to scrape to get list of press release URLs. LinkSel identifies the links on that page.
+	IndexURL, LinkSel string
+
+	// Selectors to pull out data from an individual page
+	TitleSel, ContentSel, PubdateSel, CruftSel string
+}
+
+func (scraper *DefaultScraper) Name() string { return scraper.ScraperName }
+
+func (scraper *DefaultScraper) FetchList() (found []*PressRelease, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			found = nil
+			err = e.(error)
+		}
+	}()
+	found, err = GenericFetchList(scraper.Name(), scraper.IndexURL, scraper.LinkSel)
+	return
+}
+
+func (scraper *DefaultScraper) Scrape(pr *PressRelease, rawHTML string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = e.(error)
+		}
+	}()
+	err = GenericScrape(scraper.Name(), pr, rawHTML, scraper.TitleSel, scraper.ContentSel, scraper.CruftSel, scraper.PubdateSel)
+	return
+}
 
 // GenericFetchList fetches a page, and extracts matching links.
 func GenericFetchList(scraperName, pageUrl, linkSelector string) ([]*PressRelease, error) {
@@ -47,6 +80,14 @@ func GenericFetchList(scraperName, pageUrl, linkSelector string) ([]*PressReleas
 			// TODO: log a warning?
 			continue
 		}
+
+		// stay on same site
+		if link.Host != page.Host {
+			// TODO: log a warning
+			//fmt.Printf("SKIP link to different site %s\n", link.String())
+			continue
+		}
+
 		pr := PressRelease{Source: scraperName, Permalink: link.String()}
 		docs = append(docs, &pr)
 	}
