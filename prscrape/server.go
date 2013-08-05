@@ -3,11 +3,11 @@ package prscrape
 import (
 	"fmt"
 	"github.com/donovanhide/eventsource"
+	"github.com/golang/glog"
 	//	"github.com/gorilla/mux"
 	"errors"
 	"flag"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"time"
@@ -49,19 +49,20 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 
 	pressReleases, err := scraper.FetchList()
 	if err != nil {
-		panic(err)
+		glog.Errorf("%s: FetchList failed: %s", scraper.Name(), err)
+		return
 	}
 
 	// cull out the ones we've already got
 	oldCount := len(pressReleases)
 	pressReleases = store.WhichAreNew(pressReleases)
-	log.Printf("%s: %d releases (%d new)", scraper.Name(), oldCount, len(pressReleases))
+	glog.Infof("%s: %d releases (%d new)", scraper.Name(), oldCount, len(pressReleases))
 	// for all the new ones:
 	for _, pr := range pressReleases {
 		if !pr.complete {
 			err = scrape(scraper, pr)
 			if err != nil {
-				log.Printf("ERROR '%s' %s\n", err, pr.Permalink)
+				glog.Errorf("%s: %s %s\n", scraper.Name(), err, pr.Permalink)
 				continue
 			}
 			pr.complete = true
@@ -70,9 +71,9 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 		// stash the new press release
 		ev, err := store.Stash(pr)
 		if err != nil {
-			log.Printf("%s: ERROR stashing %s (%s)", scraper.Name(), pr.Permalink, err)
+			glog.Errorf("%s: failed to stash %s (%s)", scraper.Name(), pr.Permalink, err)
 		} else {
-			log.Printf("%s: stashed %s", scraper.Name(), pr.Permalink)
+			glog.Infof("%s: added %s", scraper.Name(), pr.Permalink)
 		}
 
 		// broadcast it to any connected clients
@@ -113,18 +114,18 @@ func ServerMain(scraperList []Scraper) {
 		// TODO: merge the test implementation with doit()
 		scraper, ok := scrapers[*testScraper]
 		if !ok {
-			log.Fatal("Unknown scraper")
+			glog.Fatal("Unknown scraper %s", *testScraper)
 		}
 		pressReleases, err := scraper.FetchList()
 		if err != nil {
-			panic(err)
+			glog.Fatal(err)
 		}
 		for _, pr := range pressReleases {
 			if !pr.complete {
 				//log.Printf("%s: scrape %s", scraper.Name(), pr.Permalink)
 				err = scrape(scraper, pr)
 				if err != nil {
-					log.Printf("%s: ERROR '%s' %s\n", scraper.Name(), err, pr.Permalink)
+					glog.Errorf("%s: '%s' %s\n", scraper.Name(), err, pr.Permalink)
 					continue
 				}
 				pr.complete = true
@@ -155,7 +156,7 @@ func ServerMain(scraperList []Scraper) {
 	//
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		panic(err) //glog.Fatal(err)
+		glog.Fatal(err)
 	}
 	defer l.Close()
 
@@ -169,6 +170,6 @@ func ServerMain(scraperList []Scraper) {
 		}
 	}()
 
-	log.Printf("running on port %d", *port)
+	glog.Infof("running on port %d", *port)
 	http.Serve(l, nil)
 }
