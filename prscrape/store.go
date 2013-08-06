@@ -5,8 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/donovanhide/eventsource"
+	//_ "github.com/mattn/go-sqlite3"
 	"strconv"
 )
+
+// NOTE: github.com/mattn/go-sqlite3 and code.google.com/p/go-sqlite/go1/sqlite3
+// seem to use different (and incompatable) formats for storing time.Time values.
 
 // Store manages an archive of recent press releases.
 // It also implements eventsource.Repository to allow the press releases to be
