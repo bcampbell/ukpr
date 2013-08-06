@@ -4,7 +4,7 @@ import (
 	_ "code.google.com/p/go-sqlite/go1/sqlite3"
 	"database/sql"
 	"encoding/json"
-	"github.com/bcampbell/eventsource"
+	"github.com/donovanhide/eventsource"
 	//_ "github.com/mattn/go-sqlite3"
 	"strconv"
 )
