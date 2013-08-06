@@ -4,7 +4,7 @@ import (
 	_ "code.google.com/p/go-sqlite/go1/sqlite3"
 	"database/sql"
 	"encoding/json"
-	"github.com/donovanhide/eventsource"
+	"github.com/bcampbell/eventsource"
 	//_ "github.com/mattn/go-sqlite3"
 	"strconv"
 )
@@ -95,31 +95,16 @@ func (store *Store) Stash(pr *PressRelease) (*pressReleaseEvent, error) {
 	return &pressReleaseEvent{pr, int(id)}, nil
 }
 
-// Get to help handle last-event-id catchups
-// note: channel contains the source (eg 'tesco'...)
-func (store *Store) Get(channel, eventId string) eventsource.Event {
-	id, err := strconv.Atoi(eventId)
-	if err != nil {
-		panic(err)
-	}
-	row := store.db.QueryRow(`SELECT title,source,permalink,pubdate,content FROM press_release WHERE id=$1 AND source=$2`, id, channel)
-	var pr PressRelease
-	if err := row.Scan(&pr.Title, &pr.Source, &pr.Permalink, &pr.PubDate, &pr.Content); err != nil {
-		panic(err) // TODO: log and return nil
-	}
-	pr.complete = true
-
-	return &pressReleaseEvent{&pr, id}
-}
-
 // Replay to handle last-event-id catchups
 // note: channel contains the source (eg 'tesco'...)
-func (store *Store) Replay(channel, lastEventId string) (ids chan string) {
+func (store *Store) Replay(channel, lastEventId string) (out chan eventsource.Event) {
 	var err error
 	var rows *sql.Rows
+
+	fields := "id,title,source,permalink,pubdate,content"
 	if lastEventId == "" {
 		// no last eventid, just replay everything
-		if rows, err = store.db.Query("SELECT id FROM press_release WHERE source=$1", channel); err != nil {
+		if rows, err = store.db.Query("SELECT "+fields+" FROM press_release WHERE source=$1", channel); err != nil {
 			panic(err)
 		}
 	} else {
@@ -128,23 +113,24 @@ func (store *Store) Replay(channel, lastEventId string) (ids chan string) {
 		if err != nil {
 			panic(err)
 		}
-		if rows, err = store.db.Query("SELECT id FROM press_release WHERE id>$1 AND source=$2", id, channel); err != nil {
+		if rows, err = store.db.Query("SELECT "+fields+" FROM press_release WHERE id>$1 AND source=$2", id, channel); err != nil {
 			panic(err)
 		}
 	}
 
-	ids = make(chan string)
+	out = make(chan eventsource.Event)
 	go func() {
+		defer close(out)
 		defer rows.Close()
 		for rows.Next() {
 			var id int
-			err := rows.Scan(&id)
-			if err != nil {
+			var pr PressRelease
+			if err := rows.Scan(&id, &pr.Title, &pr.Source, &pr.Permalink, &pr.PubDate, &pr.Content); err != nil {
 				panic(err)
 			}
-			ids <- strconv.Itoa(id)
+
+			out <- &pressReleaseEvent{&pr, id}
 		}
-		close(ids)
 	}()
-	return ids
+	return
 }
