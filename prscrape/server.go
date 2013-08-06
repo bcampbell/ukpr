@@ -2,7 +2,7 @@ package prscrape
 
 import (
 	"fmt"
-	"github.com/donovanhide/eventsource"
+	"github.com/bcampbell/eventsource"
 	"github.com/golang/glog"
 	//	"github.com/gorilla/mux"
 	"errors"
