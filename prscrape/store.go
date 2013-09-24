@@ -125,6 +125,7 @@ func (store *Store) Replay(channel, lastEventId string) (out chan eventsource.Ev
 		for rows.Next() {
 			var id int
 			var pr PressRelease
+			pr.Type = "press release"
 			if err := rows.Scan(&id, &pr.Title, &pr.Source, &pr.Permalink, &pr.PubDate, &pr.Content); err != nil {
 				panic(err)
 			}
