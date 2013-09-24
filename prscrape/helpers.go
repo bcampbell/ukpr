@@ -103,6 +103,7 @@ func GenericScrape(source string, pr *PressRelease, raw_html, title, content, cr
 		return err // TODO: wrap up as ScrapeError?
 	}
 
+	pr.Type = "press release"
 	pr.Source = source
 
 	// title

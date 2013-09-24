@@ -12,6 +12,7 @@ type PressRelease struct {
 	Permalink string    `json:"permalink"`
 	PubDate   time.Time `json:"published"`
 	Content   string    `json:"text"`
+	Type      string    `json:"type"`
 	// if this is a fully-filled out press release, complete is set
 	complete bool
 }
