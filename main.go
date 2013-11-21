@@ -37,6 +37,8 @@ func main() {
 		NewTravelLodgeScraper(),
 		// Culture
 		NewTateScraper(),
+		// Government
+		NewGovUKAnnounceScraper(),
 	}
 	prscrape.ServerMain(scrapers[:])
 }
@@ -252,6 +254,23 @@ func NewSainsburysScraper() prscrape.Scraper {
 	// TODO: kill everything after: "Notes to Editors"
 	cruft := ""
 	pubDate := "#page_container .nm_right .list_plain, #page_container .blog_author"
+
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.GenericDiscover(name, url, linkSel),
+		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+	}
+}
+
+// announcments from gov.uk
+func NewGovUKAnnounceScraper() prscrape.Scraper {
+	name := "gov.uk-announce"
+	url := "https://www.gov.uk/government/announcements"
+	linkSel := "#announcements-container h3 a"
+	title := "#page article header h1"
+	content := "#page article .govspeak"
+	cruft := ""
+	pubDate := "#page article .primary-metadata .date"
 
 	return &prscrape.ComposedScraper{
 		name,
