@@ -31,58 +31,93 @@ func (scraper *ComposedScraper) Scrape(pr *PressRelease, rawHTML string) (err er
 	return scraper.DoScrape(pr, rawHTML)
 }
 
-// GenericDiscover returns a DiscoverFunc which fetches a page and extracts matching links.
+// BuildGenericDiscover returns a DiscoverFunc which fetches a page and extracts matching links.
 // TODO: pageUrl should be an array
-func GenericDiscover(scraperName, pageUrl, linkSelector string) DiscoverFunc {
+func BuildGenericDiscover(scraperName, pageUrl, linkSelector string) (DiscoverFunc, error) {
+	linkSel, err := cascadia.Compile(linkSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	// parse the url to make sure it's a good 'un
+	page, err := url.Parse(pageUrl)
+	if err != nil {
+		return nil, err
+	}
+
 	return func() ([]*PressRelease, error) {
 
-		page, err := url.Parse(pageUrl)
+		root, err := fetchPage(page)
 		if err != nil {
 			return nil, err
 		}
 
-		linkSel, err := cascadia.Compile(linkSelector)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := http.Get(pageUrl)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			err = errors.New(fmt.Sprintf("HTTP code %d (%s)", resp.StatusCode, pageUrl))
-			return nil, err
-		}
-
-		root, err := html.Parse(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		docs := make([]*PressRelease, 0)
-		for _, a := range linkSel.MatchAll(root) {
-			link, err := page.Parse(GetAttr(a, "href")) // extend to absolute url if needed
-			if err != nil {
-				// TODO: log a warning?
-				continue
-			}
-
-			// stay on same site
-			if link.Host != page.Host {
-				// TODO: log a warning
-				//fmt.Printf("SKIP link to different site %s\n", link.String())
-				continue
-			}
-
-			pr := PressRelease{Source: scraperName, Permalink: link.String()}
-			docs = append(docs, &pr)
-		}
-		return docs, nil
-	}
+		return getLinks(root, page, scraperName, linkSel)
+	}, nil
 }
 
-// GenericScrape builds a function which scrapes a press release from raw_html based on a bunch of css selector strings
-func GenericScrape(source, title, content, cruft, pubDate string) ScrapeFunc {
+// fetch and parse a page
+func fetchPage(page *url.URL) (*html.Node, error) {
+	resp, err := http.Get(page.String())
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		err = errors.New(fmt.Sprintf("HTTP code %d (%s)", resp.StatusCode, page.String()))
+		return nil, err
+	}
+
+	root, err := html.Parse(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return root, nil
+}
+
+func getLinks(root *html.Node, baseURL *url.URL, scraperName string, linkSel cascadia.Selector) ([]*PressRelease, error) {
+	docs := make([]*PressRelease, 0)
+	for _, a := range linkSel.MatchAll(root) {
+		link, err := baseURL.Parse(GetAttr(a, "href")) // extend to absolute url if needed
+		if err != nil {
+			// TODO: log a warning?
+			continue
+		}
+
+		// stay on same site
+		if link.Host != baseURL.Host {
+			// TODO: log a warning?
+			//fmt.Printf("SKIP link to different site %s\n", link.String())
+			continue
+		}
+
+		pr := PressRelease{Source: scraperName, Permalink: link.String()}
+		docs = append(docs, &pr)
+	}
+	return docs, nil
+}
+
+// BuildGenericScrape builds a function which scrapes a press release from raw_html based on a bunch of css selector strings
+func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFunc, error) {
+
+	// precompile all the selectors, to catch config errors early
+	titleSel, err := cascadia.Compile(title)
+	if err != nil {
+		return nil, err
+	}
+	contentSel, err := cascadia.Compile(content)
+	if err != nil {
+		return nil, err
+	}
+
+	var pubDateSel cascadia.Selector = nil
+	if pubDate != "" {
+		pubDateSel, err = cascadia.Compile(pubDate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return func(pr *PressRelease, rawHTML string) (err error) {
 
 		r := strings.NewReader(string(rawHTML))
@@ -95,19 +130,11 @@ func GenericScrape(source, title, content, cruft, pubDate string) ScrapeFunc {
 		pr.Source = source
 
 		// title
-		titleSel, err := cascadia.Compile(title)
-		if err != nil {
-			return err
-		}
 		pr.Title = CompressSpace(GetTextContent(titleSel.MatchAll(root)[0]))
 
 		// pubdate - only needs to contain a valid date string, doesn't matter
 		// if there's other crap in there too.
-		if pubDate != "" {
-			pubDateSel, err := cascadia.Compile(pubDate)
-			if err != nil {
-				return err
-			}
+		if pubDateSel != nil {
 			dateTxt := GetTextContent(pubDateSel.MatchAll(root)[0])
 			pr.PubDate, err = fuzzytime.Parse(dateTxt)
 			if err != nil {
@@ -121,10 +148,6 @@ func GenericScrape(source, title, content, cruft, pubDate string) ScrapeFunc {
 		}
 
 		// content
-		contentSel, err := cascadia.Compile(content)
-		if err != nil {
-			return err
-		}
 		contentElements := contentSel.MatchAll(root)
 		if cruft != "" {
 			cruftSel, err := cascadia.Compile(cruft)
@@ -152,5 +175,23 @@ func GenericScrape(source, title, content, cruft, pubDate string) ScrapeFunc {
 		}
 		//pr.Content = out.String()
 		return nil
+	}, nil
+}
+
+// TODO: kill this once a proper config parser is in place
+func MustBuildGenericDiscover(scraperName, pageUrl, linkSelector string) DiscoverFunc {
+	fn, err := BuildGenericDiscover(scraperName, pageUrl, linkSelector)
+	if err != nil {
+		panic(err)
 	}
+	return fn
+}
+
+// TODO: kill this once a proper config parser is in place
+func MustBuildGenericScrape(source, title, content, cruft, pubDate string) ScrapeFunc {
+	fn, err := BuildGenericScrape(source, title, content, cruft, pubDate)
+	if err != nil {
+		panic(err)
+	}
+	return fn
 }

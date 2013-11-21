@@ -48,8 +48,8 @@ func NewAsdaScraper() prscrape.Scraper {
 	name := "asda"
 	s := prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, "http://your.asda.com/press-centre/", "#main h2 a"),
-		prscrape.GenericScrape(name,
+		prscrape.MustBuildGenericDiscover(name, "http://your.asda.com/press-centre/", "#main h2 a"),
+		prscrape.MustBuildGenericScrape(name,
 			"#main .article-content .title h1",
 			"#main .article-content .body",
 			"",
@@ -70,8 +70,8 @@ func NewBarclaysScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -89,8 +89,8 @@ func NewVirginMoneyScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -111,8 +111,8 @@ func NewRBSScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -129,8 +129,8 @@ func NewSeventyTwoPointScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -146,8 +146,8 @@ func NewTateScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -166,8 +166,8 @@ func NewMorrisonsScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -184,8 +184,8 @@ func NewMarksAndSpencerScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -202,8 +202,8 @@ func NewTravelLodgeScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -221,8 +221,8 @@ func NewCooperativeScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -239,8 +239,8 @@ func NewWaitroseScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -257,8 +257,8 @@ func NewSainsburysScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
@@ -274,7 +274,7 @@ func NewGovUKAnnounceScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.GenericDiscover(name, url, linkSel),
-		prscrape.GenericScrape(name, title, content, cruft, pubDate),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
