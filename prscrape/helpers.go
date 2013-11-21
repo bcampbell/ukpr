@@ -38,6 +38,54 @@ func BuildGenericDiscover(scraperName, pageUrl, linkSelector string) (DiscoverFu
 	}, nil
 }
 
+// BuildPaginatedGenericDiscover returns a DiscoverFunc which fetches links
+// and steps through multiple pages.
+func BuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, linkSelector string) (DiscoverFunc, error) {
+	linkSel, err := cascadia.Compile(linkSelector)
+	if err != nil {
+		return nil, err
+	}
+	nextPageSel, err := cascadia.Compile(nextPageSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	return func() ([]*PressRelease, error) {
+		docs := make([]*PressRelease, 0)
+		// parse the url to make sure it's a good 'un
+		page, err := url.Parse(startUrl)
+		if err != nil {
+			return nil, err
+		}
+		for {
+			fmt.Printf("fetch %s\n", page.String())
+			root, err := fetchPage(page)
+			if err != nil {
+				return nil, err
+			}
+
+			foo, err := getLinks(root, page, scraperName, linkSel)
+			if err != nil {
+				return docs, err
+			}
+			docs = append(docs, foo...)
+
+			// more pages?
+			nexts := nextPageSel.MatchAll(root)
+			if len(nexts) == 0 {
+				break
+			}
+			// extend to absolute url if needed
+			nextLink, err := page.Parse(GetAttr(nexts[0], "href"))
+			if err != nil {
+				return docs, err
+			}
+			page = nextLink
+		}
+		return docs, nil
+	}, nil
+}
+
 // fetch and parse a page
 func fetchPage(page *url.URL) (*html.Node, error) {
 	resp, err := http.Get(page.String())
@@ -173,6 +221,14 @@ func MustBuildGenericDiscover(scraperName, pageUrl, linkSelector string) Discove
 // TODO: kill this once a proper config parser is in place
 func MustBuildGenericScrape(source, title, content, cruft, pubDate string) ScrapeFunc {
 	fn, err := BuildGenericScrape(source, title, content, cruft, pubDate)
+	if err != nil {
+		panic(err)
+	}
+	return fn
+}
+
+func MustBuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, linkSelector string) DiscoverFunc {
+	fn, err := BuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, linkSelector)
 	if err != nil {
 		panic(err)
 	}

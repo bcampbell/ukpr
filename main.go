@@ -134,6 +134,19 @@ func NewSeventyTwoPointScraper() prscrape.Scraper {
 	}
 }
 
+// scraper to grab press releases from 72point, including the whole historical archive
+func NewHistoricalSeventyTwoPointScraper() prscrape.Scraper {
+	// standard scraper, but replace the discover function
+	scraper := NewSeventyTwoPointScraper()
+	name := "72point"
+	url := "http://www.72point.com/coverage/"
+	linkSel := ".items .item .content .links a"
+	nextPageSel := "#system .pagination a.next"
+
+	scraper.Discover = prscrape.MustBuildPaginatedGenericDiscover(name, url, nextPageSel, linkSel)
+	return scraper
+}
+
 // scraper to grab press releases from the Tate
 func NewTateScraper() prscrape.Scraper {
 	name := "tate"
