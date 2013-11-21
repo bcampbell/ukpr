@@ -18,6 +18,8 @@ type PressRelease struct {
 }
 
 // Scraper is the interface to implement to add a new scraper to the system
+// (although in practice, they're all likely to be ComposedScraper :-)
+// TODO: dump Scraper interface entirely and just use ComposedScraper instead?
 type Scraper interface {
 	Name() string
 
@@ -33,4 +35,22 @@ type Scraper interface {
 
 	// scrape a single press release from raw html passed in as a string
 	Scrape(*PressRelease, string) error
+}
+
+type DiscoverFunc func() ([]*PressRelease, error)
+type ScrapeFunc func(pr *PressRelease, rawHTML string) error
+
+// ComposedScraper lets you pick-and-mix various discover and scrape functions
+type ComposedScraper struct {
+	ScraperName string
+	DoDiscover  DiscoverFunc
+	DoScrape    ScrapeFunc
+}
+
+func (scraper *ComposedScraper) Name() string { return scraper.ScraperName }
+func (scraper *ComposedScraper) Discover() (found []*PressRelease, err error) {
+	return scraper.DoDiscover()
+}
+func (scraper *ComposedScraper) Scrape(pr *PressRelease, rawHTML string) (err error) {
+	return scraper.DoScrape(pr, rawHTML)
 }

@@ -13,24 +13,6 @@ import (
 	"time"
 )
 
-type DiscoverFunc func() ([]*PressRelease, error)
-type ScrapeFunc func(pr *PressRelease, rawHTML string) error
-
-// ComposedScraper lets you pick-and-mix various discover and scrape functions
-type ComposedScraper struct {
-	ScraperName string
-	DoDiscover  DiscoverFunc
-	DoScrape    ScrapeFunc
-}
-
-func (scraper *ComposedScraper) Name() string { return scraper.ScraperName }
-func (scraper *ComposedScraper) Discover() (found []*PressRelease, err error) {
-	return scraper.DoDiscover()
-}
-func (scraper *ComposedScraper) Scrape(pr *PressRelease, rawHTML string) (err error) {
-	return scraper.DoScrape(pr, rawHTML)
-}
-
 // BuildGenericDiscover returns a DiscoverFunc which fetches a page and extracts matching links.
 // TODO: pageUrl should be an array
 func BuildGenericDiscover(scraperName, pageUrl, linkSelector string) (DiscoverFunc, error) {
@@ -75,6 +57,7 @@ func fetchPage(page *url.URL) (*html.Node, error) {
 	return root, nil
 }
 
+// getLinks grabs all links matching linkSel
 func getLinks(root *html.Node, baseURL *url.URL, scraperName string, linkSel cascadia.Selector) ([]*PressRelease, error) {
 	docs := make([]*PressRelease, 0)
 	for _, a := range linkSel.MatchAll(root) {
