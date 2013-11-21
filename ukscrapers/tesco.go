@@ -26,7 +26,7 @@ func (scraper *TescoScraper) Name() string {
 }
 
 // fetches a list of latest press releases from tesco plc
-func (scraper *TescoScraper) FetchList() ([]*prscrape.PressRelease, error) {
+func (scraper *TescoScraper) Discover() ([]*prscrape.PressRelease, error) {
 	feed := rss.New(0, false, nil, nil)
 	// TODO: ensure this DOES NOT go through an http proxy!
 	// (use FetchClient)

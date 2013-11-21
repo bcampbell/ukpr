@@ -47,9 +47,9 @@ func scrape(scraper Scraper, pr *PressRelease) (err error) {
 // run a scraper
 func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 
-	pressReleases, err := scraper.FetchList()
+	pressReleases, err := scraper.Discover()
 	if err != nil {
-		glog.Errorf("%s: FetchList failed: %s", scraper.Name(), err)
+		glog.Errorf("%s: Discover failed: %s", scraper.Name(), err)
 		return
 	}
 
@@ -116,7 +116,7 @@ func ServerMain(scraperList []Scraper) {
 		if !ok {
 			glog.Fatal("Unknown scraper %s", *testScraper)
 		}
-		pressReleases, err := scraper.FetchList()
+		pressReleases, err := scraper.Discover()
 		if err != nil {
 			glog.Fatal(err)
 		}
