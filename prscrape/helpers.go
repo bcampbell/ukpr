@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bcampbell/fuzzytime"
+	rss "github.com/jteeuwen/go-pkg-rss"
 	"net/http"
 	"net/url"
 	"strings"
@@ -58,7 +59,6 @@ func BuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, link
 			return nil, err
 		}
 		for {
-			fmt.Printf("fetch %s\n", page.String())
 			root, err := fetchPage(page)
 			if err != nil {
 				return nil, err
@@ -179,24 +179,23 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 		}
 
 		// content
-		contentElements := contentSel.MatchAll(root)
 		if cruft != "" {
 			cruftSel, err := cascadia.Compile(cruft)
 			if err != nil {
 				return err
 			}
-			for _, el := range contentElements {
-				for _, cruft := range cruftSel.MatchAll(el) {
-					cruft.Parent.RemoveChild(cruft)
-				}
+			for _, cruftNode := range cruftSel.MatchAll(root) {
+				cruftNode.Parent.RemoveChild(cruftNode)
 			}
 		}
+		contentElements := contentSel.MatchAll(root)
 
 		//var out bytes.Buffer
 		pr.Content = ""
 		for _, el := range contentElements {
 			StripComments(el)
 
+			// TODO: rewrite rendering to break lines upon block elements
 			pr.Content += GetTextContent(el)
 			/*err = html.Render(&out, el)
 			if err != nil {
@@ -207,6 +206,58 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 		//pr.Content = out.String()
 		return nil
 	}, nil
+}
+
+// BuildRSSDiscover returns a discover function which grabs links from rss feeds
+func BuildRSSDiscover(scraperName string, feeds []string) (DiscoverFunc, error) {
+	return func() ([]*PressRelease, error) {
+		docs := make([]*PressRelease, 0)
+		for _, feed := range feeds {
+			foo, err := rssDiscover(scraperName, feed)
+			if err != nil {
+				return docs, err
+			}
+			docs = append(docs, foo...)
+		}
+		return docs, nil
+	}, nil
+}
+
+func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
+	feed := rss.New(0, false, nil, nil)
+	// TODO: ensure this DOES NOT go through an http proxy!
+	// (use FetchClient)
+	err := feed.Fetch(feedURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	docs := make([]*PressRelease, 0)
+	for _, channel := range feed.Channels {
+		for _, item := range channel.Items {
+			//	fmt.Printf("%s '%s' %v\n", item.Link, item.Title, item.Date)
+			itemURL := item.Links[0].Href // TODO: scrub
+
+			/*
+				u, err := url.Parse(itemURL)
+				if err != nil {
+					return nil, err
+				}
+				if u.Host != "www.tescoplc.com" && u.Host != "tescoplc.com" {
+					//fmt.Printf("SKIP %s\n", itemURL)
+					continue
+				}
+			*/
+
+			pubDate, err := ParseTime(item.PubDate)
+			if err != nil {
+				panic(err)
+			}
+			pr := PressRelease{Title: item.Title, Source: scraperName, Permalink: itemURL, PubDate: pubDate}
+			docs = append(docs, &pr)
+		}
+	}
+	return docs, nil
 }
 
 // TODO: kill this once a proper config parser is in place
@@ -227,8 +278,18 @@ func MustBuildGenericScrape(source, title, content, cruft, pubDate string) Scrap
 	return fn
 }
 
+// TODO: kill this once a proper config parser is in place
 func MustBuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, linkSelector string) DiscoverFunc {
 	fn, err := BuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, linkSelector)
+	if err != nil {
+		panic(err)
+	}
+	return fn
+}
+
+// TODO: kill this once a proper config parser is in place
+func MustBuildRSSDiscover(scraperName string, feeds []string) DiscoverFunc {
+	fn, err := BuildRSSDiscover(scraperName, feeds)
 	if err != nil {
 		panic(err)
 	}

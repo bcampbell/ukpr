@@ -18,9 +18,14 @@ import (
 // to handle particularly annoying sites.
 
 func main() {
-	scrapers := [...]prscrape.Scraper{
+	prscrape.ServerMain(configure())
+}
+
+func configure() []prscrape.Scraper {
+	return []prscrape.Scraper{
 		// pr companies
 		NewSeventyTwoPointScraper(),
+		//		NewHistoricalSeventyTwoPointScraper(),
 		// supermarkets
 		uk.NewTescoScraper(),
 		NewAsdaScraper(),
@@ -39,8 +44,9 @@ func main() {
 		NewTateScraper(),
 		// Government
 		NewGovUKAnnounceScraper(),
+		// Science
+		NewEurekalertScraper(),
 	}
-	prscrape.ServerMain(scrapers[:])
 }
 
 // scraper to grab Asda press releases
@@ -137,14 +143,21 @@ func NewSeventyTwoPointScraper() prscrape.Scraper {
 // scraper to grab press releases from 72point, including the whole historical archive
 func NewHistoricalSeventyTwoPointScraper() prscrape.Scraper {
 	// standard scraper, but replace the discover function
-	scraper := NewSeventyTwoPointScraper()
 	name := "72point"
 	url := "http://www.72point.com/coverage/"
 	linkSel := ".items .item .content .links a"
 	nextPageSel := "#system .pagination a.next"
 
-	scraper.Discover = prscrape.MustBuildPaginatedGenericDiscover(name, url, nextPageSel, linkSel)
-	return scraper
+	title := "#content h3.title"
+	content := "#content .item .content"
+	cruft := ".addthis_toolbox"
+	pubDate := "#content .item .meta"
+
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildPaginatedGenericDiscover(name, url, nextPageSel, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
 }
 
 // scraper to grab press releases from the Tate
@@ -290,4 +303,20 @@ func NewGovUKAnnounceScraper() prscrape.Scraper {
 		prscrape.MustBuildGenericDiscover(name, url, linkSel),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
+}
+
+func NewEurekalertScraper() prscrape.Scraper {
+	name := "eurekalert"
+	feeds := []string{"http://www.eurekalert.org/rss.xml"}
+
+	title := "h1"
+	content := "p"
+	cruft := "table, .FA_Footer, .disclaimer"
+	pubDate := "" // use date from rss
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
 }
