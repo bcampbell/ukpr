@@ -6,17 +6,56 @@ import (
 	"encoding/json"
 	"github.com/donovanhide/eventsource"
 	//_ "github.com/mattn/go-sqlite3"
+	"fmt"
 	"strconv"
 )
+
+type Store interface {
+	WhichAreNew(incoming []*PressRelease) []*PressRelease
+	Stash(pr *PressRelease) (*pressReleaseEvent, error)
+	Replay(channel, lastEventId string) chan eventsource.Event
+}
+
+type TestStore struct {
+	briefMode bool
+}
+
+func NewTestStore(brief bool) *TestStore {
+	store := &TestStore{brief}
+	return store
+}
+
+func (store *TestStore) WhichAreNew(incoming []*PressRelease) []*PressRelease {
+	return incoming
+}
+
+func (store *TestStore) Stash(pr *PressRelease) (*pressReleaseEvent, error) {
+	if store.briefMode {
+		fmt.Printf("%s %s\n", pr.Title, pr.Permalink)
+	} else {
+		fmt.Printf("%s\n %s\n %s\n", pr.Title, pr.PubDate, pr.Permalink)
+		fmt.Println("")
+		fmt.Println(pr.Content)
+		fmt.Println("------------------------------")
+	}
+
+	id := 0
+	return &pressReleaseEvent{pr, int(id)}, nil
+}
+
+func (store *TestStore) Replay(channel, lastEventId string) chan eventsource.Event {
+	panic("unsupported")
+	return nil
+}
 
 // NOTE: github.com/mattn/go-sqlite3 and code.google.com/p/go-sqlite/go1/sqlite3
 // seem to use different (and incompatable) formats for storing time.Time values.
 
-// Store manages an archive of recent press releases.
+// DBStore manages an archive of recent press releases in an sqlite db.
 // It also implements eventsource.Repository to allow the press releases to be
 // streamed out as server side events.
 // Can stash away press releases for multiple sources.
-type Store struct {
+type DBStore struct {
 	db *sql.DB
 }
 
@@ -39,8 +78,8 @@ func (ev *pressReleaseEvent) Data() string {
 	return string(out)
 }
 
-func NewStore(dbfile string) *Store {
-	store := new(Store)
+func NewDBStore(dbfile string) *DBStore {
+	store := new(DBStore)
 	db, err := sql.Open("sqlite3", dbfile)
 	if err != nil {
 		panic(err)
@@ -62,7 +101,7 @@ func NewStore(dbfile string) *Store {
 }
 
 // returns a list of press releases with the ones already in the store culled out
-func (store *Store) WhichAreNew(incoming []*PressRelease) []*PressRelease {
+func (store *DBStore) WhichAreNew(incoming []*PressRelease) []*PressRelease {
 	var unseen []*PressRelease
 	// should really just use a single sql query ("WHERE permalink IN (...)" but hey.
 	for _, pr := range incoming {
@@ -82,7 +121,7 @@ func (store *Store) WhichAreNew(incoming []*PressRelease) []*PressRelease {
 }
 
 // Stash adds a press release into the store
-func (store *Store) Stash(pr *PressRelease) (*pressReleaseEvent, error) {
+func (store *DBStore) Stash(pr *PressRelease) (*pressReleaseEvent, error) {
 
 	res, err := store.db.Exec("INSERT INTO press_release (title,source,permalink,pubdate,content) VALUES ($1,$2,$3,$4,$5)", pr.Title, pr.Source, pr.Permalink, pr.PubDate, pr.Content)
 	if err != nil {
@@ -97,7 +136,7 @@ func (store *Store) Stash(pr *PressRelease) (*pressReleaseEvent, error) {
 
 // Replay to handle last-event-id catchups
 // note: channel contains the source (eg 'tesco'...)
-func (store *Store) Replay(channel, lastEventId string) (out chan eventsource.Event) {
+func (store *DBStore) Replay(channel, lastEventId string) (out chan eventsource.Event) {
 	var err error
 	var rows *sql.Rows
 

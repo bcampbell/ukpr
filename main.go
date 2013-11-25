@@ -9,7 +9,6 @@ package main
 
 import (
 	"github.com/bcampbell/ukpr/prscrape"
-
 	uk "github.com/bcampbell/ukpr/ukscrapers"
 )
 
@@ -18,7 +17,7 @@ import (
 // to handle particularly annoying sites.
 
 func main() {
-	prscrape.ServerMain(configure())
+	prscrape.ServerMain(configure)
 }
 
 func configure() []prscrape.Scraper {
@@ -27,7 +26,7 @@ func configure() []prscrape.Scraper {
 		NewSeventyTwoPointScraper(),
 		//		NewHistoricalSeventyTwoPointScraper(),
 		// supermarkets
-		uk.NewTescoScraper(),
+		uk.NewTescoScraper(), // our only custom scraper
 		NewAsdaScraper(),
 		NewWaitroseScraper(),
 		NewMarksAndSpencerScraper(),

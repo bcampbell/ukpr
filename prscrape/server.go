@@ -45,7 +45,7 @@ func scrape(scraper Scraper, pr *PressRelease) (err error) {
 }
 
 // run a scraper
-func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
+func doit(scraper Scraper, store Store, sseSrv *eventsource.Server) {
 
 	pressReleases, err := scraper.Discover()
 	if err != nil {
@@ -76,8 +76,10 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 			glog.Infof("%s: added %s", scraper.Name(), pr.Permalink)
 		}
 
-		// broadcast it to any connected clients
-		sseSrv.Publish([]string{pr.Source}, ev)
+		if sseSrv != nil {
+			// broadcast it to any connected clients
+			sseSrv.Publish([]string{pr.Source}, ev)
+		}
 	}
 }
 
@@ -86,71 +88,63 @@ func doit(scraper Scraper, store *Store, sseSrv *eventsource.Server) {
 // easily write a new server with a different bunch of scrapers. The real
 // main() would just be a small stub which instantiates a bunch of scrapers,
 // then passes control over to here. See ukpr/main.go for an example
-func ServerMain(scraperList []Scraper) {
+func ServerMain(configfunc ConfigureFunc) {
 	var port = flag.Int("port", 9998, "port to run server on")
 	var interval = flag.Int("interval", 60*10, "interval at which to poll source sites for new releases (in seconds)")
-	var testScraper = flag.String("t", "", "Test run an individual scraper, dumping to stdout. Doesn't run server or alter the database.")
+	var testMode = flag.Bool("t", false, "Test mode - dumping to stdout. Doesn't run server or alter the database.")
 	var briefFlag = flag.Bool("b", false, "Brief (testing mode output)")
 	var listFlag = flag.Bool("l", false, "List scrapers and exit")
+	//	var historicalFlag = flag.Bool("historical", false, "Run historical version of scrapers, where available")
 
 	flag.Parse()
 
-	scrapers := make(map[string]Scraper)
-
-	for _, scraper := range scraperList {
-		name := scraper.Name()
-		scrapers[name] = scraper
-	}
+	// set up scrapers
+	scraperList := configfunc()
 
 	if *listFlag {
-		for name, _ := range scrapers {
-			fmt.Println(name)
+		// list scrapers and exit
+		for _, scraper := range scraperList {
+			fmt.Println(scraper.Name())
 		}
 		return
 	}
 
-	if *testScraper != "" {
-		// run a single scraper, without server or store
-		// TODO: merge the test implementation with doit()
-		scraper, ok := scrapers[*testScraper]
-		if !ok {
-			glog.Fatal("Unknown scraper %s", *testScraper)
-		}
-		pressReleases, err := scraper.Discover()
-		if err != nil {
-			glog.Fatal(err)
-		}
-		for _, pr := range pressReleases {
-			if !pr.complete {
-				//log.Printf("%s: scrape %s", scraper.Name(), pr.Permalink)
-				err = scrape(scraper, pr)
-				if err != nil {
-					glog.Errorf("%s: '%s' %s\n", scraper.Name(), err, pr.Permalink)
-					continue
-				}
-				pr.complete = true
-			}
-
-			if !*briefFlag {
-				fmt.Printf("%s\n %s\n %s\n", pr.Title, pr.PubDate, pr.Permalink)
-				fmt.Println("")
-				fmt.Println(pr.Content)
-				fmt.Println("------------------------------")
-			} else {
-				fmt.Printf("%s %s\n", pr.Title, pr.Permalink)
-			}
-		}
-		return
+	allScrapers := make(map[string]Scraper)
+	for _, scraper := range scraperList {
+		name := scraper.Name()
+		allScrapers[name] = scraper
 	}
 
-	// set up as server
+	activeScrapers := make(map[string]Scraper)
+	if len(flag.Args()) > 0 {
+		// user asked for a subset of scrapers
+		for _, name := range flag.Args() {
+			scraper, ok := allScrapers[name]
+			if !ok {
+				panic(fmt.Sprintf("%s: unknown scraper", name))
+			}
+			activeScrapers[name] = scraper
+		}
+	} else {
+		activeScrapers = allScrapers
+	}
+
+	// set up store and SSE server
 	// using a common store for all scrapers
 	// but no reason they couldn't all have their own store
-	store := NewStore("./prstore.db")
-	sseSrv := eventsource.NewServer()
-	for name, _ := range scrapers {
-		sseSrv.Register(name, store)
-		http.Handle("/"+name+"/", sseSrv.Handler(name))
+	var store Store
+	var sseSrv *eventsource.Server
+
+	if *testMode {
+		store = NewTestStore(*briefFlag)
+		sseSrv = nil
+	} else {
+		store = NewDBStore("./prstore.db")
+		sseSrv = eventsource.NewServer()
+		for name, _ := range activeScrapers {
+			sseSrv.Register(name, store)
+			http.Handle("/"+name+"/", sseSrv.Handler(name))
+		}
 	}
 
 	//
@@ -160,10 +154,10 @@ func ServerMain(scraperList []Scraper) {
 	}
 	defer l.Close()
 
-	// cheesy task to periodically run the scrapers
+	// cheesy task to periodically run the active scrapers
 	go func() {
 		for {
-			for _, scraper := range scrapers {
+			for _, scraper := range activeScrapers {
 				doit(scraper, store, sseSrv)
 			}
 			time.Sleep(time.Duration(*interval) * time.Second)

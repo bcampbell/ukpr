@@ -37,6 +37,8 @@ type Scraper interface {
 	Scrape(*PressRelease, string) error
 }
 
+type ConfigureFunc func() []Scraper
+
 type DiscoverFunc func() ([]*PressRelease, error)
 type ScrapeFunc func(pr *PressRelease, rawHTML string) error
 
