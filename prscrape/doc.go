@@ -26,15 +26,5 @@
 // Without last-event-id, the client will be served only new press
 // releases as they come in.
 //
-//
-// TODOs
-// - proper logging and better error handling (kill all the panics!)
-// - we've already got a http server running, so should implement a simple
-//   browsing interface for visual sanity-checking of press releases.
-// - add a html-scrubbing func to clean up extracted content (remove style
-//   attrs, ids, dodgy elements etc)
-// - better interval timing
-// - expire old data from the store
-// - split prscrape out from ukpr
 
 package prscrape
