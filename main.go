@@ -22,7 +22,6 @@ func main() {
 
 func configure(historical bool) []prscrape.Scraper {
 	out := []prscrape.Scraper{
-		// pr companies
 		// supermarkets
 		uk.NewTescoScraper(), // our only custom scraper
 		NewAsdaScraper(),
@@ -43,6 +42,8 @@ func configure(historical bool) []prscrape.Scraper {
 		NewGovUKAnnounceScraper(),
 		// Science
 		NewEurekalertScraper(),
+		// pr general
+		NewPRWebUKScraper(),
 	}
 
 	if historical {
@@ -320,6 +321,24 @@ func NewEurekalertScraper() prscrape.Scraper {
 	return &prscrape.ComposedScraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+
+func NewPRWebUKScraper() prscrape.Scraper {
+	name := "prwebuk"
+	// there is an rss feed, but it only holds 10 items (too few for such a high-volume source)
+	url := "http://uk.prweb.com/recentnews/"
+	linkSel := "#releases .release a"
+
+	title := ".container .release .content h1.title"
+	content := ".container .release .content p"
+	cruft := ".footershare, .mediabox, .releaseDateline"
+	pubDate := ".releaseDateline"
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 

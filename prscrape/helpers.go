@@ -235,7 +235,7 @@ func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
 	docs := make([]*PressRelease, 0)
 	for _, channel := range feed.Channels {
 		for _, item := range channel.Items {
-			//	fmt.Printf("%s '%s' %v\n", item.Link, item.Title, item.Date)
+			//fmt.Printf("%v\n", item)
 			itemURL := item.Links[0].Href // TODO: scrub
 
 			/*
@@ -248,10 +248,9 @@ func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
 					continue
 				}
 			*/
-
 			pubDate, err := ParseTime(item.PubDate)
 			if err != nil {
-				panic(err)
+				pubDate = time.Time{}
 			}
 			pr := PressRelease{Title: item.Title, Source: scraperName, Permalink: itemURL, PubDate: pubDate}
 			docs = append(docs, &pr)
