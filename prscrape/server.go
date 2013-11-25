@@ -46,7 +46,9 @@ func scrape(scraper Scraper, pr *PressRelease) (err error) {
 
 // run a scraper
 func doit(scraper Scraper, store Store, sseSrv *eventsource.Server) {
-
+	if glog.V(1) {
+		glog.Infof("%s: Discover", scraper.Name())
+	}
 	pressReleases, err := scraper.Discover()
 	if err != nil {
 		glog.Errorf("%s: Discover failed: %s", scraper.Name(), err)
@@ -56,7 +58,9 @@ func doit(scraper Scraper, store Store, sseSrv *eventsource.Server) {
 	// cull out the ones we've already got
 	oldCount := len(pressReleases)
 	pressReleases = store.WhichAreNew(pressReleases)
-	glog.Infof("%s: %d releases (%d new)", scraper.Name(), oldCount, len(pressReleases))
+	if glog.V(1) {
+		glog.Infof("%s: %d releases (%d new)", scraper.Name(), oldCount, len(pressReleases))
+	}
 	// for all the new ones:
 	for _, pr := range pressReleases {
 		if !pr.complete {
@@ -94,12 +98,12 @@ func ServerMain(configfunc ConfigureFunc) {
 	var testMode = flag.Bool("t", false, "Test mode - dumping to stdout. Doesn't run server or alter the database.")
 	var briefFlag = flag.Bool("b", false, "Brief (testing mode output)")
 	var listFlag = flag.Bool("l", false, "List scrapers and exit")
-	//	var historicalFlag = flag.Bool("historical", false, "Run historical version of scrapers, where available")
+	var historicalFlag = flag.Bool("historical", false, "Run historical version of scrapers, where available")
 
 	flag.Parse()
 
 	// set up scrapers
-	scraperList := configfunc()
+	scraperList := configfunc(*historicalFlag)
 
 	if *listFlag {
 		// list scrapers and exit
@@ -159,6 +163,9 @@ func ServerMain(configfunc ConfigureFunc) {
 		for {
 			for _, scraper := range activeScrapers {
 				doit(scraper, store, sseSrv)
+			}
+			if glog.V(1) {
+				glog.Info("sleeping")
 			}
 			time.Sleep(time.Duration(*interval) * time.Second)
 		}

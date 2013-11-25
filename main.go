@@ -20,11 +20,9 @@ func main() {
 	prscrape.ServerMain(configure)
 }
 
-func configure() []prscrape.Scraper {
-	return []prscrape.Scraper{
+func configure(historical bool) []prscrape.Scraper {
+	out := []prscrape.Scraper{
 		// pr companies
-		NewSeventyTwoPointScraper(),
-		//		NewHistoricalSeventyTwoPointScraper(),
 		// supermarkets
 		uk.NewTescoScraper(), // our only custom scraper
 		NewAsdaScraper(),
@@ -46,6 +44,13 @@ func configure() []prscrape.Scraper {
 		// Science
 		NewEurekalertScraper(),
 	}
+
+	if historical {
+		out = append(out, NewHistoricalSeventyTwoPointScraper())
+	} else {
+		out = append(out, NewSeventyTwoPointScraper())
+	}
+	return out
 }
 
 // scraper to grab Asda press releases
