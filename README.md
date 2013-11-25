@@ -13,9 +13,9 @@ Clients connect to:
 
     http://<host>:<port>/<source>/
 
-where source is (currently) one of:
-    tesco
-    72point
+where source is one of the scrapers. You can get a list using:
+
+    ./ukpr -l
 
 Clients can send a last-event-id header to access archived press releases.
 eg:
@@ -30,8 +30,8 @@ releases as they come in.
 
 ## TODOs
 
- - proper logging and error handling (kill all the panics!)
- - split up into separate packages (in particular, make it easy to build
-   a new app with a diffferent bunch of scrapers)
  - we've already got a http server running, so should implement a simple
    browsing interface for visual sanity-checking of press releases.
+ - implement a proper config file system
+ - run the scrapers in parallel with proper interval timing
+
