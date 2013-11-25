@@ -45,6 +45,9 @@ func configure(historical bool) []prscrape.Scraper {
 		// pr general
 		NewPRWebUKScraper(),
 		NewPRNewsWireUKScraper(),
+		// thinktanks
+		NewPolicyExchangeScraper(),
+		NewMigrationWatchScraper(),
 	}
 
 	if historical {
@@ -345,7 +348,6 @@ func NewPRWebUKScraper() prscrape.Scraper {
 
 }
 
-// http://www.prnewswire.co.uk/news-releases/news-releases-list/
 func NewPRNewsWireUKScraper() prscrape.Scraper {
 	name := "prnewswire.co.uk"
 
@@ -358,6 +360,40 @@ func NewPRNewsWireUKScraper() prscrape.Scraper {
 	return &prscrape.ComposedScraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+
+func NewPolicyExchangeScraper() prscrape.Scraper {
+	name := "policyexchange.org.uk"
+
+	feeds := []string{"http://www.policyexchange.org.uk/media-centre/press-releases/category/feed/rss/press-releases?format=feed"}
+
+	title := "#main .item h2"
+	content := "#main .item .element"
+	cruft := ""
+	pubDate := "#main .item .event-date"
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+
+func NewMigrationWatchScraper() prscrape.Scraper {
+	name := "migrationwatchuk.org"
+	url := "http://www.migrationwatchuk.org/press-releases"
+	linkSel := ".middleColumn a[href*=\"/press-release/\"]"
+
+	title := ".mainColumn h1"
+	content := ".mainColumn .article"
+	pubDate := ".mainColumn .article em"
+	cruft := ""
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildGenericDiscover(name, url, linkSel),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
