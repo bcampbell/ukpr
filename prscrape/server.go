@@ -66,7 +66,9 @@ func doit(scraper Scraper, store Store, sseSrv *eventsource.Server) {
 		if !pr.complete {
 			err = scrape(scraper, pr)
 			if err != nil {
-				glog.Errorf("%s: %s %s\n", scraper.Name(), err, pr.Permalink)
+				if glog.V(1) {
+					glog.Infof("%s: %s %s\n", scraper.Name(), err, pr.Permalink)
+				}
 				continue
 			}
 			pr.complete = true
