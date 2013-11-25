@@ -44,6 +44,7 @@ func configure(historical bool) []prscrape.Scraper {
 		NewEurekalertScraper(),
 		// pr general
 		NewPRWebUKScraper(),
+		NewPRNewsWireUKScraper(),
 	}
 
 	if historical {
@@ -311,7 +312,7 @@ func NewGovUKAnnounceScraper() prscrape.Scraper {
 }
 
 func NewEurekalertScraper() prscrape.Scraper {
-	name := "eurekalert"
+	name := "eurekalert.com"
 	feeds := []string{"http://www.eurekalert.org/rss.xml"}
 
 	title := "h1"
@@ -327,7 +328,7 @@ func NewEurekalertScraper() prscrape.Scraper {
 }
 
 func NewPRWebUKScraper() prscrape.Scraper {
-	name := "prwebuk"
+	name := "uk.prweb.com"
 	// there is an rss feed, but it only holds 10 items (too few for such a high-volume source)
 	url := "http://uk.prweb.com/recentnews/"
 	linkSel := "#releases .release a"
@@ -339,6 +340,24 @@ func NewPRWebUKScraper() prscrape.Scraper {
 	return &prscrape.ComposedScraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+
+// http://www.prnewswire.co.uk/news-releases/news-releases-list/
+func NewPRNewsWireUKScraper() prscrape.Scraper {
+	name := "prnewswire.co.uk"
+
+	feeds := []string{"http://www.prnewswire.co.uk/rss/english-releases-news.rss"}
+
+	title := "#newsdetailnew h1"
+	content := "#newsdetailnew .news-col p"
+	cruft := ""
+	pubDate := "#newsdetailnew .xn-chron"
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
