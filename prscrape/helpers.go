@@ -10,6 +10,7 @@ import (
 	rss "github.com/jteeuwen/go-pkg-rss"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -196,15 +197,11 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 		for _, el := range contentElements {
 			StripComments(el)
 
-			// TODO: rewrite rendering to break lines upon block elements
-			pr.Content += RenderText(el)
-			/*err = html.Render(&out, el)
-			if err != nil {
-				return err
-			}
-			*/
+			txt := RenderText(el)
+			txt = regexp.MustCompile(`^[\n]{2,}`).ReplaceAllLiteralString(txt, "")
+			txt = regexp.MustCompile(`[\n]{2,}$`).ReplaceAllLiteralString(txt, "\n")
+			pr.Content += txt
 		}
-		//pr.Content = out.String()
 		return nil
 	}, nil
 }

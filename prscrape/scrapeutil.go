@@ -75,7 +75,6 @@ var inlineTags = map[string]bool{"a": true, "abbr": true, "acronym": true, "b": 
 	"applet": true, "button": true, "del": true, "iframe": true, "ins": true, "map": true, "object": true,
 	"script": true}
 
-// RenderText returns the text, using whitespace and line breaks
 func innerRenderText(n *html.Node) string {
 	if n.Type == html.TextNode {
 		return n.Data
@@ -102,6 +101,7 @@ func innerRenderText(n *html.Node) string {
 	return txt
 }
 
+// RenderText returns the text, using whitespace and line breaks to make it look nice
 func RenderText(n *html.Node) string {
 	txt := innerRenderText(n)
 	txt = regexp.MustCompile(`[\r\n]\s+[\r\n]`).ReplaceAllLiteralString(txt, "\n\n")
