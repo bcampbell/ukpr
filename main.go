@@ -48,6 +48,7 @@ func configure(historical bool) []prscrape.Scraper {
 		// thinktanks
 		NewPolicyExchangeScraper(),
 		NewMigrationWatchScraper(),
+		NewTaxpayersAllianceScraper(),
 	}
 
 	if historical {
@@ -63,7 +64,7 @@ func NewAsdaScraper() prscrape.Scraper {
 	name := "asda"
 	s := prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, "http://your.asda.com/press-centre/", "#main h2 a"),
+		prscrape.MustBuildGenericDiscover(name, "http://your.asda.com/press-centre/", "#main h2 a", false),
 		prscrape.MustBuildGenericScrape(name,
 			"#main .article-content .title h1",
 			"#main .article-content .body",
@@ -85,7 +86,7 @@ func NewBarclaysScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -104,7 +105,7 @@ func NewVirginMoneyScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -126,7 +127,7 @@ func NewRBSScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -144,7 +145,7 @@ func NewSeventyTwoPointScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -181,7 +182,7 @@ func NewTateScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -201,7 +202,7 @@ func NewMorrisonsScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -219,7 +220,7 @@ func NewMarksAndSpencerScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -237,7 +238,7 @@ func NewTravelLodgeScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -256,7 +257,7 @@ func NewCooperativeScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -274,7 +275,7 @@ func NewWaitroseScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -292,7 +293,7 @@ func NewSainsburysScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -309,7 +310,7 @@ func NewGovUKAnnounceScraper() prscrape.Scraper {
 
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
@@ -342,7 +343,7 @@ func NewPRWebUKScraper() prscrape.Scraper {
 	pubDate := ".releaseDateline"
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
@@ -393,8 +394,26 @@ func NewMigrationWatchScraper() prscrape.Scraper {
 	cruft := ""
 	return &prscrape.ComposedScraper{
 		name,
-		prscrape.MustBuildGenericDiscover(name, url, linkSel),
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
+}
+
+func NewTaxpayersAllianceScraper() prscrape.Scraper {
+	name := "taxpayersalliance.com"
+	feeds := []string{"http://www.taxpayersalliance.com/rss"}
+
+	title := ".entry h1"
+	content := ".entry .entry_content"
+	cruft := ".sharedaddy, .yarpp-related, .author-info"
+	// sigh... rss has no date, and page uses a stupid format (eg "Nov 2013 23")
+	// for now, just use current date
+	// TODO: fix this!
+	pubDate := ""
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
 }

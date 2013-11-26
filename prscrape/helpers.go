@@ -16,7 +16,7 @@ import (
 
 // BuildGenericDiscover returns a DiscoverFunc which fetches a page and extracts matching links.
 // TODO: pageUrl should be an array
-func BuildGenericDiscover(scraperName, pageUrl, linkSelector string) (DiscoverFunc, error) {
+func BuildGenericDiscover(scraperName, pageUrl, linkSelector string, allowHostChange bool) (DiscoverFunc, error) {
 	linkSel, err := cascadia.Compile(linkSelector)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func BuildGenericDiscover(scraperName, pageUrl, linkSelector string) (DiscoverFu
 			return nil, err
 		}
 
-		return getLinks(root, page, scraperName, linkSel)
+		return getLinks(root, page, scraperName, linkSel, allowHostChange)
 	}, nil
 }
 
@@ -64,7 +64,7 @@ func BuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, link
 				return nil, err
 			}
 
-			foo, err := getLinks(root, page, scraperName, linkSel)
+			foo, err := getLinks(root, page, scraperName, linkSel, true)
 			if err != nil {
 				return docs, err
 			}
@@ -106,7 +106,7 @@ func fetchPage(page *url.URL) (*html.Node, error) {
 }
 
 // getLinks grabs all links matching linkSel
-func getLinks(root *html.Node, baseURL *url.URL, scraperName string, linkSel cascadia.Selector) ([]*PressRelease, error) {
+func getLinks(root *html.Node, baseURL *url.URL, scraperName string, linkSel cascadia.Selector, allowHostChange bool) ([]*PressRelease, error) {
 	docs := make([]*PressRelease, 0)
 	for _, a := range linkSel.MatchAll(root) {
 		link, err := baseURL.Parse(GetAttr(a, "href")) // extend to absolute url if needed
@@ -115,8 +115,8 @@ func getLinks(root *html.Node, baseURL *url.URL, scraperName string, linkSel cas
 			continue
 		}
 
-		// stay on same site
-		if link.Host != baseURL.Host {
+		// stay on same site?
+		if !allowHostChange && (link.Host != baseURL.Host) {
 			// TODO: log a warning?
 			//fmt.Printf("SKIP link to different site %s\n", link.String())
 			continue
@@ -169,6 +169,7 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 			dateTxt := GetTextContent(pubDateSel.MatchAll(root)[0])
 			pr.PubDate, err = fuzzytime.Parse(dateTxt)
 			if err != nil {
+				fmt.Printf("ZZZZ: '%s'\n", dateTxt)
 				return err
 			}
 		} else {
@@ -260,8 +261,8 @@ func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
 }
 
 // TODO: kill this once a proper config parser is in place
-func MustBuildGenericDiscover(scraperName, pageUrl, linkSelector string) DiscoverFunc {
-	fn, err := BuildGenericDiscover(scraperName, pageUrl, linkSelector)
+func MustBuildGenericDiscover(scraperName, pageUrl, linkSelector string, allowHostChange bool) DiscoverFunc {
+	fn, err := BuildGenericDiscover(scraperName, pageUrl, linkSelector, allowHostChange)
 	if err != nil {
 		panic(err)
 	}
