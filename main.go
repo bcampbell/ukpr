@@ -49,6 +49,9 @@ func configure(historical bool) []prscrape.Scraper {
 		NewPolicyExchangeScraper(),
 		NewMigrationWatchScraper(),
 		NewTaxpayersAllianceScraper(),
+		// charities
+		NewGreenpeaceUKScraper(),
+		NewShelterScraper(),
 	}
 
 	if historical {
@@ -416,4 +419,38 @@ func NewTaxpayersAllianceScraper() prscrape.Scraper {
 		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
+}
+
+func NewGreenpeaceUKScraper() prscrape.Scraper {
+	name := "greenpeace.org.uk"
+	url := "http://www.greenpeace.org.uk/media/press-releases"
+	linkSel := ".view-press-releases .views-row a"
+
+	title := "#main h1"
+	content := "#main .node .content .field-body"
+	pubDate := "#main .node .content .field-date-published"
+	cruft := ""
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+func NewShelterScraper() prscrape.Scraper {
+	name := "shelter.org.uk"
+	url := "http://media.shelter.org.uk/home/press_releases"
+	linkSel := "#mediaListingWrapper h3 a"
+
+	title := ".news_story_body h1"
+	content := ".news_story_body"
+	// TODO: get pubdate from meta tag
+	pubDate := ""
+	cruft := ""
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
 }
