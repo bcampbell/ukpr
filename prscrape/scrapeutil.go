@@ -66,3 +66,45 @@ func StripComments(n *html.Node) {
 		child = next
 	}
 }
+
+var inlineTags = map[string]bool{"a": true, "abbr": true, "acronym": true, "b": true, "basefont": true, "bdo": true, "big": true,
+	"br":   true,
+	"cite": true, "code": true, "dfn": true, "em": true, "font": true, "i": true, "img": true, "input": true,
+	"kbd": true, "label": true, "q": true, "s": true, "samp": true, "select": true, "small": true, "span": true,
+	"strike": true, "strong": true, "sub": true, "sup": true, "textarea": true, "tt": true, "u": true, "var": true,
+	"applet": true, "button": true, "del": true, "iframe": true, "ins": true, "map": true, "object": true,
+	"script": true}
+
+// RenderText returns the text, using whitespace and line breaks
+func innerRenderText(n *html.Node) string {
+	if n.Type == html.TextNode {
+		return n.Data
+	}
+
+	if n.Type != html.ElementNode {
+		return ""
+	}
+
+	txt := ""
+	tag := strings.ToLower(n.DataAtom.String())
+	_, inline := inlineTags[tag]
+	if !inline {
+		txt += "\n"
+	}
+	for child := n.FirstChild; child != nil; child = child.NextSibling {
+		txt += innerRenderText(child)
+	}
+
+	if tag == "br" || !inline {
+		txt += "\n"
+	}
+	// TODO: strip out excessive whitespace
+	return txt
+}
+
+func RenderText(n *html.Node) string {
+	txt := innerRenderText(n)
+	txt = regexp.MustCompile(`[\r\n]\s+[\r\n]`).ReplaceAllLiteralString(txt, "\n\n")
+	txt = regexp.MustCompile(`[\r\n]{2,}`).ReplaceAllLiteralString(txt, "\n\n")
+	return txt
+}

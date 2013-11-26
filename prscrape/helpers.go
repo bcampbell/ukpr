@@ -197,7 +197,7 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 			StripComments(el)
 
 			// TODO: rewrite rendering to break lines upon block elements
-			pr.Content += GetTextContent(el)
+			pr.Content += RenderText(el)
 			/*err = html.Render(&out, el)
 			if err != nil {
 				return err
