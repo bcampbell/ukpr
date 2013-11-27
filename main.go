@@ -52,6 +52,14 @@ func configure(historical bool) []prscrape.Scraper {
 		// charities
 		NewGreenpeaceUKScraper(),
 		NewShelterScraper(),
+		// political parties
+		NewConservativePartyScraper(),
+		NewGreenPartyScraper(),
+		// TODO: support full-text feeds, eg:
+		//http://www.ukip.org/component/ninjarsssyndicator/?feed_id=1&format=raw
+		//http://press.labour.org.uk/rss
+		//http://www.libdems.org.uk/latest_news.aspx?view=RSS
+
 	}
 
 	if historical {
@@ -450,6 +458,38 @@ func NewShelterScraper() prscrape.Scraper {
 	return &prscrape.ComposedScraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+
+func NewConservativePartyScraper() prscrape.Scraper {
+	name := "conservatives.com"
+	feeds := []string{"http://www.conservatives.com/XMLGateway/RSS/News.xml"}
+
+	title := ".lg-content h1"
+	content := ".lg-content .entry"
+	pubDate := ".lg-content .info"
+	cruft := ""
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+
+func NewGreenPartyScraper() prscrape.Scraper {
+	name := "greenparty.org.uk"
+	feeds := []string{"http://greenparty.org.uk/news.atom.xml"}
+
+	title := ".mainpanel h1"
+	content := ".mainpanel p"
+	pubDate := ".mainpanel .smallblockcapstitles"
+	cruft := `.mainpanel h1, .mainpanel .smallblockcapstitles, .mainpanel p>a[href="http://greenparty.org.uk/news/"]`
+	return &prscrape.ComposedScraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
