@@ -20,8 +20,8 @@ func main() {
 	prscrape.ServerMain(configure)
 }
 
-func configure(historical bool) []prscrape.Scraper {
-	out := []prscrape.Scraper{
+func configure(historical bool) []*prscrape.Scraper {
+	out := []*prscrape.Scraper{
 		// supermarkets
 		uk.NewTescoScraper(), // our only custom scraper
 		NewAsdaScraper(),
@@ -55,11 +55,13 @@ func configure(historical bool) []prscrape.Scraper {
 		// political parties
 		NewConservativePartyScraper(),
 		NewGreenPartyScraper(),
-		// TODO: support full-text feeds, eg:
-		//http://www.ukip.org/component/ninjarsssyndicator/?feed_id=1&format=raw
-		//http://press.labour.org.uk/rss
-		//http://www.libdems.org.uk/latest_news.aspx?view=RSS
-
+		NewFullRSSScraper("labour.org.uk",
+			[]string{"http://press.labour.org.uk/rss"}),
+		NewFullRSSScraper("libdems.org.uk",
+			[]string{"http://www.libdems.org.uk/latest_news.aspx?view=RSS"}),
+		// UKIP disabled for now. Bad character issues in XML casues rss parser to bail
+		//NewFullRSSScraper("ukip.org",
+		//  []string{"http://www.ukip.org/component/ninjarsssyndicator/?feed_id=1&format=raw"}),
 	}
 
 	if historical {
@@ -70,10 +72,18 @@ func configure(historical bool) []prscrape.Scraper {
 	return out
 }
 
+// build a scraper which just uses a rss feed (not all rss feeds have full text)
+func NewFullRSSScraper(name string, feeds []string) *prscrape.Scraper {
+	return &prscrape.Scraper{
+		Name:     name,
+		Discover: prscrape.MustBuildRSSDiscover(name, feeds),
+	}
+}
+
 // scraper to grab Asda press releases
-func NewAsdaScraper() prscrape.Scraper {
+func NewAsdaScraper() *prscrape.Scraper {
 	name := "asda"
-	s := prscrape.ComposedScraper{
+	s := prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, "http://your.asda.com/press-centre/", "#main h2 a", false),
 		prscrape.MustBuildGenericScrape(name,
@@ -86,7 +96,7 @@ func NewAsdaScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from Barclays
-func NewBarclaysScraper() prscrape.Scraper {
+func NewBarclaysScraper() *prscrape.Scraper {
 	name := "barclays"
 	url := "http://www.newsroom.barclays.com/content/default.aspx?NewsAreaID=2"
 	linkSel := ".individualResultListing h2 a"
@@ -95,7 +105,7 @@ func NewBarclaysScraper() prscrape.Scraper {
 	cruft := ""
 	pubDate := ".mainContent .titleDate"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -103,7 +113,7 @@ func NewBarclaysScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from Virgin Money
-func NewVirginMoneyScraper() prscrape.Scraper {
+func NewVirginMoneyScraper() *prscrape.Scraper {
 	name := "virginmoney"
 	url := "http://uk.virginmoney.com/virgin/news-centre/"
 	linkSel := ".section>.padding .content:nth-child(2) p>a"
@@ -114,7 +124,7 @@ func NewVirginMoneyScraper() prscrape.Scraper {
 	cruft := title + ", " + pubDate
 	// TODO: stop content at "ENDS" or " - ENDS - "
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -122,7 +132,7 @@ func NewVirginMoneyScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from RBS
-func NewRBSScraper() prscrape.Scraper {
+func NewRBSScraper() *prscrape.Scraper {
 	name := "rbs"
 	url := "http://www.rbs.com/news.html"
 	linkSel := ".news-row h3 a"
@@ -136,7 +146,7 @@ func NewRBSScraper() prscrape.Scraper {
 	pubDate := "article .rbs-rich-text:first-child h2, #main .mainpara"
 	cruft := pubDate
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -144,7 +154,7 @@ func NewRBSScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from 72point
-func NewSeventyTwoPointScraper() prscrape.Scraper {
+func NewSeventyTwoPointScraper() *prscrape.Scraper {
 	name := "72point"
 	url := "http://www.72point.com/coverage/"
 	linkSel := ".items .item .content .links a"
@@ -154,7 +164,7 @@ func NewSeventyTwoPointScraper() prscrape.Scraper {
 	cruft := ".addthis_toolbox"
 	pubDate := "#content .item .meta"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -162,7 +172,7 @@ func NewSeventyTwoPointScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from 72point, including the whole historical archive
-func NewHistoricalSeventyTwoPointScraper() prscrape.Scraper {
+func NewHistoricalSeventyTwoPointScraper() *prscrape.Scraper {
 	// standard scraper, but replace the discover function
 	name := "72point"
 	url := "http://www.72point.com/coverage/"
@@ -174,7 +184,7 @@ func NewHistoricalSeventyTwoPointScraper() prscrape.Scraper {
 	cruft := ".addthis_toolbox"
 	pubDate := "#content .item .meta"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildPaginatedGenericDiscover(name, url, nextPageSel, linkSel),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -182,7 +192,7 @@ func NewHistoricalSeventyTwoPointScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from the Tate
-func NewTateScraper() prscrape.Scraper {
+func NewTateScraper() *prscrape.Scraper {
 	name := "tate"
 	url := "http://www.tate.org.uk/about/press-office/releases"
 	linkSel := ".tate-facet-search-result .result-title h3 a"
@@ -191,7 +201,7 @@ func NewTateScraper() prscrape.Scraper {
 	content := "#region-content article .field-name-body"
 	cruft := ""
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -199,7 +209,7 @@ func NewTateScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from Morrisons
-func NewMorrisonsScraper() prscrape.Scraper {
+func NewMorrisonsScraper() *prscrape.Scraper {
 	// TODO: morrisons press releases don't have dates on the individual pages.
 	// should extract dates during discovery
 	name := "morrisons"
@@ -211,7 +221,7 @@ func NewMorrisonsScraper() prscrape.Scraper {
 	cruft := "script, .button_divider, .featured_funnels, .block2Inner"
 	pubDate := ""
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -219,7 +229,7 @@ func NewMorrisonsScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from MarksAndSpencer
-func NewMarksAndSpencerScraper() prscrape.Scraper {
+func NewMarksAndSpencerScraper() *prscrape.Scraper {
 	name := "marksandspencer"
 	url := "http://corporate.marksandspencer.com/media/press_releases"
 	linkSel := "#press-releases .item h2 a"
@@ -229,7 +239,7 @@ func NewMarksAndSpencerScraper() prscrape.Scraper {
 	cruft := "p.back-top, p.reference"
 	pubDate := "#main" // TODO: a more specific selector would be nice!
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -237,7 +247,7 @@ func NewMarksAndSpencerScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from TravelLodge
-func NewTravelLodgeScraper() prscrape.Scraper {
+func NewTravelLodgeScraper() *prscrape.Scraper {
 	name := "travellodge"
 	url := "http://www.travelodge.co.uk/news/category/press-releases/"
 	linkSel := ".hentry h2 a"
@@ -247,7 +257,7 @@ func NewTravelLodgeScraper() prscrape.Scraper {
 	content := ".hentry .post-box"
 	cruft := "script, address"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -255,7 +265,7 @@ func NewTravelLodgeScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from Cooperative
-func NewCooperativeScraper() prscrape.Scraper {
+func NewCooperativeScraper() *prscrape.Scraper {
 	name := "cooperative"
 	url := "http://www.co-operative.coop/corporate/Press/Press-releases/"
 	linkSel := "#divNewsList h2 a"
@@ -266,7 +276,7 @@ func NewCooperativeScraper() prscrape.Scraper {
 	// TODO: kill everything after: "Additional Information:"
 	cruft := "script, noscript, .TwitterTweetFacebookLike, .CrumbTrail, .main-content, .NewsItemDate, .NewsItemFooter, .sendToAFriendBelowContent"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -274,7 +284,7 @@ func NewCooperativeScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from Waitrose
-func NewWaitroseScraper() prscrape.Scraper {
+func NewWaitroseScraper() *prscrape.Scraper {
 	name := "waitrose"
 	url := "http://www.waitrose.presscentre.com/content/default.aspx?NewsAreaID=2"
 	linkSel := "#content .main .item h3 a"
@@ -284,7 +294,7 @@ func NewWaitroseScraper() prscrape.Scraper {
 	cruft := ""
 	pubDate := "#content .date_release"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -292,7 +302,7 @@ func NewWaitroseScraper() prscrape.Scraper {
 }
 
 // scraper to grab press releases from Sainsburys
-func NewSainsburysScraper() prscrape.Scraper {
+func NewSainsburysScraper() *prscrape.Scraper {
 	name := "sainsburys"
 	url := "http://www.j-sainsbury.co.uk/media/latest-stories/"
 	linkSel := "#content_container a.title"
@@ -302,7 +312,7 @@ func NewSainsburysScraper() prscrape.Scraper {
 	cruft := ""
 	pubDate := "#page_container .nm_right .list_plain, #page_container .blog_author"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -310,7 +320,7 @@ func NewSainsburysScraper() prscrape.Scraper {
 }
 
 // announcments from gov.uk
-func NewGovUKAnnounceScraper() prscrape.Scraper {
+func NewGovUKAnnounceScraper() *prscrape.Scraper {
 	name := "gov.uk-announce"
 	url := "https://www.gov.uk/government/announcements"
 	linkSel := "#announcements-container h3 a"
@@ -319,14 +329,14 @@ func NewGovUKAnnounceScraper() prscrape.Scraper {
 	cruft := ""
 	pubDate := "#page article .primary-metadata .date"
 
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
-func NewEurekalertScraper() prscrape.Scraper {
+func NewEurekalertScraper() *prscrape.Scraper {
 	name := "eurekalert.com"
 	feeds := []string{"http://www.eurekalert.org/rss.xml"}
 
@@ -334,7 +344,7 @@ func NewEurekalertScraper() prscrape.Scraper {
 	content := "p"
 	cruft := "table, .FA_Footer, .disclaimer"
 	pubDate := "" // use date from rss
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -342,7 +352,7 @@ func NewEurekalertScraper() prscrape.Scraper {
 
 }
 
-func NewPRWebUKScraper() prscrape.Scraper {
+func NewPRWebUKScraper() *prscrape.Scraper {
 	name := "uk.prweb.com"
 	// there is an rss feed, but it only holds 10 items (too few for such a high-volume source)
 	url := "http://uk.prweb.com/recentnews/"
@@ -352,7 +362,7 @@ func NewPRWebUKScraper() prscrape.Scraper {
 	content := ".container .release .content p"
 	cruft := ".footershare, .mediabox, .releaseDateline"
 	pubDate := ".releaseDateline"
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -360,7 +370,7 @@ func NewPRWebUKScraper() prscrape.Scraper {
 
 }
 
-func NewPRNewsWireUKScraper() prscrape.Scraper {
+func NewPRNewsWireUKScraper() *prscrape.Scraper {
 	name := "prnewswire.co.uk"
 
 	feeds := []string{"http://www.prnewswire.co.uk/rss/english-releases-news.rss"}
@@ -369,7 +379,7 @@ func NewPRNewsWireUKScraper() prscrape.Scraper {
 	content := "#newsdetailnew .news-col p"
 	cruft := ""
 	pubDate := "#newsdetailnew .xn-chron"
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -377,7 +387,7 @@ func NewPRNewsWireUKScraper() prscrape.Scraper {
 
 }
 
-func NewPolicyExchangeScraper() prscrape.Scraper {
+func NewPolicyExchangeScraper() *prscrape.Scraper {
 	name := "policyexchange.org.uk"
 
 	feeds := []string{"http://www.policyexchange.org.uk/media-centre/press-releases/category/feed/rss/press-releases?format=feed"}
@@ -386,7 +396,7 @@ func NewPolicyExchangeScraper() prscrape.Scraper {
 	content := "#main .item .element"
 	cruft := ""
 	pubDate := "#main .item .event-date"
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -394,7 +404,7 @@ func NewPolicyExchangeScraper() prscrape.Scraper {
 
 }
 
-func NewMigrationWatchScraper() prscrape.Scraper {
+func NewMigrationWatchScraper() *prscrape.Scraper {
 	name := "migrationwatchuk.org"
 	url := "http://www.migrationwatchuk.org/press-releases"
 	linkSel := ".middleColumn a[href*=\"/press-release/\"]"
@@ -403,7 +413,7 @@ func NewMigrationWatchScraper() prscrape.Scraper {
 	content := ".mainColumn .article"
 	pubDate := ".mainColumn .article em"
 	cruft := ""
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -411,7 +421,7 @@ func NewMigrationWatchScraper() prscrape.Scraper {
 
 }
 
-func NewTaxpayersAllianceScraper() prscrape.Scraper {
+func NewTaxpayersAllianceScraper() *prscrape.Scraper {
 	name := "taxpayersalliance.com"
 	feeds := []string{"http://www.taxpayersalliance.com/rss"}
 
@@ -422,14 +432,14 @@ func NewTaxpayersAllianceScraper() prscrape.Scraper {
 	// for now, just use current date
 	// TODO: fix this!
 	pubDate := ""
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 }
 
-func NewGreenpeaceUKScraper() prscrape.Scraper {
+func NewGreenpeaceUKScraper() *prscrape.Scraper {
 	name := "greenpeace.org.uk"
 	url := "http://www.greenpeace.org.uk/media/press-releases"
 	linkSel := ".view-press-releases .views-row a"
@@ -438,14 +448,14 @@ func NewGreenpeaceUKScraper() prscrape.Scraper {
 	content := "#main .node .content .field-body"
 	pubDate := "#main .node .content .field-date-published"
 	cruft := ""
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
 }
-func NewShelterScraper() prscrape.Scraper {
+func NewShelterScraper() *prscrape.Scraper {
 	name := "shelter.org.uk"
 	url := "http://media.shelter.org.uk/home/press_releases"
 	linkSel := "#mediaListingWrapper h3 a"
@@ -455,7 +465,7 @@ func NewShelterScraper() prscrape.Scraper {
 	// TODO: get pubdate from meta tag
 	pubDate := ""
 	cruft := ""
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -463,7 +473,7 @@ func NewShelterScraper() prscrape.Scraper {
 
 }
 
-func NewConservativePartyScraper() prscrape.Scraper {
+func NewConservativePartyScraper() *prscrape.Scraper {
 	name := "conservatives.com"
 	feeds := []string{"http://www.conservatives.com/XMLGateway/RSS/News.xml"}
 
@@ -471,7 +481,7 @@ func NewConservativePartyScraper() prscrape.Scraper {
 	content := ".lg-content .entry"
 	pubDate := ".lg-content .info"
 	cruft := ""
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
@@ -479,7 +489,7 @@ func NewConservativePartyScraper() prscrape.Scraper {
 
 }
 
-func NewGreenPartyScraper() prscrape.Scraper {
+func NewGreenPartyScraper() *prscrape.Scraper {
 	name := "greenparty.org.uk"
 	feeds := []string{"http://greenparty.org.uk/news.atom.xml"}
 
@@ -487,7 +497,7 @@ func NewGreenPartyScraper() prscrape.Scraper {
 	content := ".mainpanel p"
 	pubDate := ".mainpanel .smallblockcapstitles"
 	cruft := `.mainpanel h1, .mainpanel .smallblockcapstitles, .mainpanel p>a[href="http://greenparty.org.uk/news/"]`
-	return &prscrape.ComposedScraper{
+	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),

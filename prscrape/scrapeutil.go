@@ -4,8 +4,9 @@ package prscrape
 
 import (
 	"code.google.com/p/go.net/html"
-	//"fmt"
+	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -80,24 +81,23 @@ func innerRenderText(n *html.Node) string {
 		return n.Data
 	}
 
-	if n.Type != html.ElementNode {
+	if n.Type != html.ElementNode && n.Type != html.DocumentNode {
 		return ""
 	}
-
 	txt := ""
 	tag := strings.ToLower(n.DataAtom.String())
 	_, inline := inlineTags[tag]
 	if !inline {
-		txt += "\n"
+		if tag == "br" {
+			txt = "\n" + txt + "\n"
+		} else {
+			txt = "\n" + txt
+		}
 	}
 	for child := n.FirstChild; child != nil; child = child.NextSibling {
 		txt += innerRenderText(child)
 	}
 
-	if tag == "br" || !inline {
-		txt += "\n"
-	}
-	// TODO: strip out excessive whitespace
 	return txt
 }
 
@@ -107,4 +107,40 @@ func RenderText(n *html.Node) string {
 	txt = regexp.MustCompile(`[\r\n]\s+[\r\n]`).ReplaceAllLiteralString(txt, "\n\n")
 	txt = regexp.MustCompile(`[\r\n]{2,}`).ReplaceAllLiteralString(txt, "\n\n")
 	return txt
+}
+
+// DescribeNode generates a debug string describing the node.
+// returns a string of form: "<element#id.class>" (ie, like a css selector)
+func DescribeNode(n *html.Node) string {
+	switch n.Type {
+	case html.ElementNode:
+		desc := n.DataAtom.String()
+		id := GetAttr(n, "id")
+		if id != "" {
+			desc = desc + "#" + id
+		}
+		// TODO: handle multiple classes (eg "h1.heading.fancy")
+		cls := GetAttr(n, "class")
+		if cls != "" {
+			desc = desc + "." + cls
+		}
+		return "<" + desc + ">"
+	case html.TextNode:
+		return fmt.Sprintf("{TextNode} %s", strconv.Quote(n.Data))
+	case html.DocumentNode:
+		return "{DocumentNode}"
+	case html.CommentNode:
+		return "{Comment}"
+	case html.DoctypeNode:
+		return "{DoctypeNode}"
+	}
+	return "???" // not an element
+}
+
+// dumpTree is a debug helper to display a tree of nodes
+func DumpTree(n *html.Node, depth int) {
+	fmt.Printf("%s%s\n", strings.Repeat(" ", depth), DescribeNode(n))
+	for child := n.FirstChild; child != nil; child = child.NextSibling {
+		DumpTree(child, depth+1)
+	}
 }

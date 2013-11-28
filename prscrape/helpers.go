@@ -221,13 +221,23 @@ func BuildRSSDiscover(scraperName string, feeds []string) (DiscoverFunc, error) 
 	}, nil
 }
 
+func htmlToText(rawHTML string) string {
+	r := strings.NewReader(rawHTML)
+	doc, err := html.Parse(r)
+	if err != nil {
+		return ""
+	}
+	return RenderText(doc)
+}
+
 func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
 	feed := rss.New(0, false, nil, nil)
 	// TODO: ensure this DOES NOT go through an http proxy!
 	// (use FetchClient)
+	// TODO: this is a bit brittle with badly-formed XML (eg badly-encoded characters)
 	err := feed.Fetch(feedURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rss: %s", err)
 	}
 
 	docs := make([]*PressRelease, 0)
@@ -236,6 +246,7 @@ func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
 			//fmt.Printf("%v\n", item)
 			itemURL := item.Links[0].Href // TODO: scrub
 
+			txt := htmlToText(item.Description)
 			/*
 				u, err := url.Parse(itemURL)
 				if err != nil {
@@ -250,7 +261,7 @@ func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
 			if err != nil {
 				pubDate = time.Time{}
 			}
-			pr := PressRelease{Title: item.Title, Source: scraperName, Permalink: itemURL, PubDate: pubDate}
+			pr := PressRelease{Title: item.Title, Source: scraperName, Permalink: itemURL, PubDate: pubDate, Content: txt}
 			docs = append(docs, &pr)
 		}
 	}

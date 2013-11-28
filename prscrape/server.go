@@ -14,7 +14,7 @@ import (
 )
 
 // helper to fetch and scrape an individual press release
-func scrape(scraper Scraper, pr *PressRelease) (err error) {
+func scrape(scraper *Scraper, pr *PressRelease) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.New(fmt.Sprintf("%v", e))
@@ -45,13 +45,13 @@ func scrape(scraper Scraper, pr *PressRelease) (err error) {
 }
 
 // run a scraper
-func doit(scraper Scraper, store Store, sseSrv *eventsource.Server) {
+func doit(scraper *Scraper, store Store, sseSrv *eventsource.Server) {
 	if glog.V(1) {
-		glog.Infof("%s: Discover", scraper.Name())
+		glog.Infof("%s: Discover", scraper.Name)
 	}
 	pressReleases, err := scraper.Discover()
 	if err != nil {
-		glog.Errorf("%s: Discover failed: %s", scraper.Name(), err)
+		glog.Errorf("%s: Discover failed: %s", scraper.Name, err)
 		return
 	}
 
@@ -59,27 +59,27 @@ func doit(scraper Scraper, store Store, sseSrv *eventsource.Server) {
 	oldCount := len(pressReleases)
 	pressReleases = store.WhichAreNew(pressReleases)
 	if glog.V(1) {
-		glog.Infof("%s: %d releases (%d new)", scraper.Name(), oldCount, len(pressReleases))
+		glog.Infof("%s: %d releases (%d new)", scraper.Name, oldCount, len(pressReleases))
 	}
 	// for all the new ones:
 	for _, pr := range pressReleases {
-		if !pr.complete {
+		if scraper.Scrape != nil {
 			err = scrape(scraper, pr)
 			if err != nil {
 				if glog.V(1) {
-					glog.Infof("%s: %s %s\n", scraper.Name(), err, pr.Permalink)
+					glog.Infof("%s: %s %s\n", scraper.Name, err, pr.Permalink)
 				}
 				continue
 			}
-			pr.complete = true
 		}
+		// TODO: sanity check required fields
 
 		// stash the new press release
 		ev, err := store.Stash(pr)
 		if err != nil {
-			glog.Errorf("%s: failed to stash %s (%s)", scraper.Name(), pr.Permalink, err)
+			glog.Errorf("%s: failed to stash %s (%s)", scraper.Name, pr.Permalink, err)
 		} else {
-			glog.Infof("%s: added %s", scraper.Name(), pr.Permalink)
+			glog.Infof("%s: added %s", scraper.Name, pr.Permalink)
 		}
 
 		if sseSrv != nil {
@@ -110,18 +110,17 @@ func ServerMain(configfunc ConfigureFunc) {
 	if *listFlag {
 		// list scrapers and exit
 		for _, scraper := range scraperList {
-			fmt.Println(scraper.Name())
+			fmt.Println(scraper.Name)
 		}
 		return
 	}
 
-	allScrapers := make(map[string]Scraper)
+	allScrapers := make(map[string]*Scraper)
 	for _, scraper := range scraperList {
-		name := scraper.Name()
-		allScrapers[name] = scraper
+		allScrapers[scraper.Name] = scraper
 	}
 
-	activeScrapers := make(map[string]Scraper)
+	activeScrapers := make(map[string]*Scraper)
 	if len(flag.Args()) > 0 {
 		// user asked for a subset of scrapers
 		for _, name := range flag.Args() {
