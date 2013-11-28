@@ -9,7 +9,7 @@ import (
 )
 
 // numbe of dummy scrapers to create
-const NSCRAPERS int = 20
+const NSCRAPERS int = 4
 
 // number of dummy press releases emited by each scraper per run
 const NRELEASES int = 100

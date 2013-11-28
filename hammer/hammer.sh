@@ -8,8 +8,11 @@ sources=`./hammer -l`
 PID=$!
 sleep 0.1
 for s in $sources; do
-    # repeat this line to run multiple clients for each source
-    curl http://localhost:9998/$s/ -H "Last-Event-ID: 0" -s >/dev/null &
+    # start 20 clients for each source(!)
+    for i in {1..20}; do
+        echo start $s $i
+        curl http://localhost:9998/$s/ -H "Last-Event-ID: 0" -s >/dev/null &
+    done
 done
 
 # run for 30 sec then kill everything off (killing the server should
