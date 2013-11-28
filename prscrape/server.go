@@ -94,10 +94,11 @@ func doit(scraper *Scraper, store Store, sseSrv *eventsource.Server) {
 // easily write a new server with a different bunch of scrapers. The real
 // main() would just be a small stub which instantiates a bunch of scrapers,
 // then passes control over to here. See ukpr/main.go for an example
-func ServerMain(configfunc ConfigureFunc) {
+func ServerMain(dbFile string, configfunc ConfigureFunc) {
 	var port = flag.Int("port", 9998, "port to run server on")
 	var interval = flag.Int("interval", 60*10, "interval at which to poll source sites for new releases (in seconds)")
 	var testMode = flag.Bool("t", false, "Test mode - dumping to stdout. Doesn't run server or alter the database.")
+	var noScrape = flag.Bool("noscrape", false, "Don't run _any_ scrapers")
 	var briefFlag = flag.Bool("b", false, "Brief (testing mode output)")
 	var listFlag = flag.Bool("l", false, "List scrapers and exit")
 	var historicalFlag = flag.Bool("historical", false, "Run historical version of scrapers, where available")
@@ -121,7 +122,9 @@ func ServerMain(configfunc ConfigureFunc) {
 	}
 
 	activeScrapers := make(map[string]*Scraper)
-	if len(flag.Args()) > 0 {
+	if *noScrape {
+		// leave activeScrapers empty
+	} else if len(flag.Args()) > 0 {
 		// user asked for a subset of scrapers
 		for _, name := range flag.Args() {
 			scraper, ok := allScrapers[name]
@@ -144,9 +147,10 @@ func ServerMain(configfunc ConfigureFunc) {
 		store = NewTestStore(*briefFlag)
 		sseSrv = nil
 	} else {
-		store = NewDBStore("./prstore.db")
+		store = NewDBStore(dbFile)
 		sseSrv = eventsource.NewServer()
-		for name, _ := range activeScrapers {
+		// register all scrapers as sse sources, even if they're not active
+		for name, _ := range allScrapers {
 			sseSrv.Register(name, store)
 			http.Handle("/"+name+"/", sseSrv.Handler(name))
 		}

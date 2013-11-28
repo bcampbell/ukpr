@@ -17,7 +17,7 @@ import (
 // to handle particularly annoying sites.
 
 func main() {
-	prscrape.ServerMain(configure)
+	prscrape.ServerMain("prstore.db", configure)
 }
 
 func configure(historical bool) []*prscrape.Scraper {

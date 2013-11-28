@@ -92,11 +92,16 @@ func (ev *pressReleaseEvent) Data() string {
 
 func NewDBStore(dbfile string) *DBStore {
 	store := new(DBStore)
+	//db, err := sql.Open("sqlite3", "file:"+dbfile+"?cache=shared&mode=rwc")
 	db, err := sql.Open("sqlite3", dbfile)
 	if err != nil {
 		panic(err)
 	}
 	store.db = db
+	_, err = db.Exec(`PRAGMA journal_mode=WAL`)
+	if err != nil {
+		panic(err)
+	}
 
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS press_release (
          id INTEGER PRIMARY KEY,
