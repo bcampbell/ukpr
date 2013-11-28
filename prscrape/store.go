@@ -1,13 +1,28 @@
 package prscrape
 
+// NOTE: we've switched sqlite bindings, from
+//   code.google.com/p/go-sqlite/go1/sqlite3
+// to
+//   github.com/mattn/go-sqlite3
+//
+// The former doesn't handle concurrency nicely, violating one of the
+// golang sql aims:
+//   http://golang.org/src/pkg/database/sql/doc.txt?s=1209:1611#L31
+//
+// The former stored datetimes as unix timestamps, whereas the latter
+// uses "2013-11-28 03:34:56.379363289".
+
 import (
-	_ "code.google.com/p/go-sqlite/go1/sqlite3"
+	//	_ "code.google.com/p/go-sqlite/go1/sqlite3"
 	"database/sql"
 	"encoding/json"
 	"github.com/donovanhide/eventsource"
+	_ "github.com/mattn/go-sqlite3"
 	//_ "github.com/mattn/go-sqlite3"
 	"fmt"
 	"strconv"
+
+//	"time"
 )
 
 type Store interface {
@@ -47,9 +62,6 @@ func (store *TestStore) Replay(channel, lastEventId string) chan eventsource.Eve
 	panic("unsupported")
 	return nil
 }
-
-// NOTE: github.com/mattn/go-sqlite3 and code.google.com/p/go-sqlite/go1/sqlite3
-// seem to use different (and incompatable) formats for storing time.Time values.
 
 // DBStore manages an archive of recent press releases in an sqlite db.
 // It also implements eventsource.Repository to allow the press releases to be
@@ -97,7 +109,29 @@ func NewDBStore(dbfile string) *DBStore {
 		panic(err)
 	}
 
+	store.fixDates()
+
 	return store
+}
+
+// fixDates is a temporary fn to update datetime values already in db.
+func (store *DBStore) fixDates() {
+	var cnt int
+	// look for the epoch-format values
+	err := store.db.QueryRow("select count(*) from press_release where pubdate not like '%-%-%'").Scan(&cnt)
+	if err != nil {
+		panic(err)
+	}
+	if cnt == 0 {
+		return
+	}
+	fmt.Printf("FIXING date format for %d rows...", cnt)
+
+	_, err = store.db.Exec("UPDATE press_release SET pubdate=DATETIME(pubdate,'unixepoch') WHERE pubdate NOT LIKE '%-%-%'")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("done.\n")
 }
 
 // returns a list of press releases with the ones already in the store culled out
