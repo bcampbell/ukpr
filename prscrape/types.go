@@ -1,6 +1,7 @@
 package prscrape
 
 import (
+	"code.google.com/p/go.net/html"
 	"time"
 )
 
@@ -28,7 +29,7 @@ type ConfigureFunc func(historical bool) []*Scraper
 type DiscoverFunc func() ([]*PressRelease, error)
 
 // ScrapeFunc is for scraping a single press release from html
-type ScrapeFunc func(pr *PressRelease, rawHTML string) error
+type ScrapeFunc func(pr *PressRelease, doc *html.Node) error
 
 // ComposedScraper lets you pick-and-mix various discover and scrape functions
 type Scraper struct {

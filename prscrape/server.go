@@ -7,9 +7,9 @@ import (
 	//	"github.com/gorilla/mux"
 	"errors"
 	"flag"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -20,24 +20,18 @@ func scrape(scraper *Scraper, pr *PressRelease) (err error) {
 			err = errors.New(fmt.Sprintf("%v", e))
 		}
 	}()
-	resp, err := http.Get(pr.Permalink)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		err = errors.New(fmt.Sprintf("HTTP code %d (%s)", resp.StatusCode, pr.Permalink))
-		return
-	}
-	html, err := ioutil.ReadAll(resp.Body)
+	pageURL, err := url.Parse(pr.Permalink)
 	if err != nil {
 		return
 	}
 
-	// TODO: collect redirects
+	root, err := fetchPage(pageURL)
+	if err != nil {
+		return
+	}
 
-	err = scraper.Scrape(pr, string(html))
+	err = scraper.Scrape(pr, root)
 	if err != nil {
 		return
 	}

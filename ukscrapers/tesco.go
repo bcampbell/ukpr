@@ -7,7 +7,6 @@ import (
 	"github.com/bcampbell/fuzzytime"
 	"github.com/bcampbell/ukpr/prscrape"
 	"regexp"
-	"strings"
 )
 
 // currently got a custom scrape func for tesco, to try and snip off
@@ -24,13 +23,7 @@ func NewTescoScraper() *prscrape.Scraper {
 	}
 }
 
-func scrape(pr *prscrape.PressRelease, raw_html string) error {
-	r := strings.NewReader(string(raw_html))
-	root, err := html.Parse(r)
-	if err != nil {
-		return err // TODO: wrap up as ScrapeError?
-	}
-
+func scrape(pr *prscrape.PressRelease, root *html.Node) error {
 	containerSel := cascadia.MustCompile(".pagecontent")
 	titleSel := cascadia.MustCompile(".newstitle")
 	dateSel := cascadia.MustCompile(".greydate")
@@ -49,6 +42,7 @@ func scrape(pr *prscrape.PressRelease, raw_html string) error {
 
 	//
 	dateTxt := prscrape.GetTextContent(dateSel.MatchAll(div)[0])
+	var err error
 	pr.PubDate, err = fuzzytime.Parse(dateTxt)
 	if err != nil {
 		return err

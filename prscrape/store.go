@@ -86,7 +86,10 @@ func (ev *pressReleaseEvent) Event() string {
 }
 
 func (ev *pressReleaseEvent) Data() string {
-	out, _ := json.Marshal(*ev.payload)
+	out, err := json.Marshal(*ev.payload)
+	if err != nil {
+		panic(err)
+	}
 	return string(out)
 }
 

@@ -3,11 +3,15 @@ package prscrape
 import (
 	//	"bytes"
 	"code.google.com/p/cascadia"
+	"code.google.com/p/go-charset/charset"
+	_ "code.google.com/p/go-charset/data"
 	"code.google.com/p/go.net/html"
 	"errors"
 	"fmt"
 	"github.com/bcampbell/fuzzytime"
 	rss "github.com/jteeuwen/go-pkg-rss"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -87,19 +91,39 @@ func BuildPaginatedGenericDiscover(scraperName, startUrl, nextPageSelector, link
 	}, nil
 }
 
-// fetch and parse a page
+// fetches an HTML page, converts it to utf-8 and parses it
 func fetchPage(page *url.URL) (*html.Node, error) {
 	resp, err := http.Get(page.String())
 	if err != nil {
 		return nil, err
 	}
+	// TODO: collect redirects
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err = errors.New(fmt.Sprintf("HTTP code %d (%s)", resp.StatusCode, page.String()))
 		return nil, err
 	}
 
-	root, err := html.Parse(resp.Body)
+	// read the page and devine the character encoding.
+	// if it's not utf-8, convert it.
+	rawHTML, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	enc := findCharset("", rawHTML)
+	var r io.Reader
+	r = strings.NewReader(string(rawHTML))
+	if enc != "utf-8" {
+		// we'll be translating to utf-8
+		var err error
+		r, err = charset.NewReader(enc, r)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	root, err := html.Parse(r)
 	if err != nil {
 		return nil, err
 	}
@@ -150,14 +174,7 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 		}
 	}
 
-	return func(pr *PressRelease, rawHTML string) (err error) {
-
-		r := strings.NewReader(string(rawHTML))
-		root, err := html.Parse(r)
-		if err != nil {
-			return err // TODO: wrap up as ScrapeError?
-		}
-
+	return func(pr *PressRelease, root *html.Node) (err error) {
 		pr.Type = "press release"
 		pr.Source = source
 
