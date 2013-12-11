@@ -62,6 +62,9 @@ func configure(historical bool) []*prscrape.Scraper {
 		// UKIP disabled for now. Bad character issues in XML casues rss parser to bail
 		//NewFullRSSScraper("ukip.org",
 		//  []string{"http://www.ukip.org/component/ninjarsssyndicator/?feed_id=1&format=raw"}),
+
+		// consistant PR placement in news
+		NewIllicitEncountersScraper(),
 	}
 
 	if historical {
@@ -500,6 +503,25 @@ func NewGreenPartyScraper() *prscrape.Scraper {
 	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildRSSDiscover(name, feeds),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+
+}
+
+// NOTE: rss feed also has large volume of press coverage links
+//   http://blog.illicitencounters.com/feed/rss/
+func NewIllicitEncountersScraper() *prscrape.Scraper {
+	name := "illicitencounters.com"
+	url := "http://blog.illicitencounters.com/"
+	linkSel := `#content .post a[rel="bookmark"]`
+
+	title := "#content h2"
+	content := "#content .entry"
+	pubDate := "" // use date from URL
+	cruft := ""
+	return &prscrape.Scraper{
+		name,
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
