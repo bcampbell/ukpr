@@ -46,7 +46,7 @@ func (store *TestStore) WhichAreNew(incoming []*PressRelease) []*PressRelease {
 
 func (store *TestStore) Stash(pr *PressRelease) (*pressReleaseEvent, error) {
 	if store.briefMode {
-		fmt.Printf("%s %s\n", pr.Title, pr.Permalink)
+		fmt.Printf("%s \"%s\" %s\n", pr.PubDate, pr.Title, pr.Permalink)
 	} else {
 		fmt.Printf("%s\n %s\n %s\n", pr.Title, pr.PubDate, pr.Permalink)
 		fmt.Println("")

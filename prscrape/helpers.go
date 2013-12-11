@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -174,6 +175,7 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 		}
 	}
 
+	urlDatePat := regexp.MustCompile(`/(\d{4})/(\d{2})/(\d{2})/`)
 	return func(pr *PressRelease, root *html.Node) (err error) {
 		pr.Type = "press release"
 		pr.Source = source
@@ -187,12 +189,18 @@ func BuildGenericScrape(source, title, content, cruft, pubDate string) (ScrapeFu
 			dateTxt := GetTextContent(pubDateSel.MatchAll(root)[0])
 			pr.PubDate, err = fuzzytime.Parse(dateTxt)
 			if err != nil {
-				fmt.Printf("ZZZZ: '%s'\n", dateTxt)
 				return err
 			}
-		} else {
-			// if time isn't already set, just fudge using current time
-			if pr.PubDate.IsZero() {
+		} else if pr.PubDate.IsZero() {
+			// try the URL
+			m := urlDatePat.FindStringSubmatch(pr.Permalink)
+			if m != nil {
+				year, _ := strconv.Atoi(m[1])
+				month, _ := strconv.Atoi(m[2])
+				day, _ := strconv.Atoi(m[3])
+				pr.PubDate = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+			} else {
+				// last resort - just fudge using current time
 				pr.PubDate = time.Now()
 			}
 		}
