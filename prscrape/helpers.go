@@ -263,7 +263,21 @@ func rssDiscover(scraperName string, feedURL string) ([]*PressRelease, error) {
 			//fmt.Printf("%v\n", item)
 			itemURL := item.Links[0].Href // TODO: scrub
 
-			txt := htmlToText(item.Description)
+			var txt string
+			if item.Content == nil {
+				// rss
+				txt = htmlToText(item.Description)
+			} else {
+				// atom
+				switch strings.ToLower(item.Content.Type) {
+				case "text":
+					txt = item.Content.Text
+				case "html", "xhtml":
+					txt = htmlToText(item.Content.Text)
+
+				}
+			}
+
 			/*
 				u, err := url.Parse(itemURL)
 				if err != nil {
