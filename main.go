@@ -68,6 +68,7 @@ func configure(historical bool) []*prscrape.Scraper {
 		// Media
 		NewBBCScraper(),
 		NewBSkyBScraper(),
+		NewITVScraper(),
 	}
 
 	if historical {
@@ -554,6 +555,22 @@ func NewBSkyBScraper() *prscrape.Scraper {
 	content := "#maincontent div"
 	pubDate := "#maincontent .boldnospc"
 	cruft := ""
+	return &prscrape.Scraper{
+		name,
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+}
+
+func NewITVScraper() *prscrape.Scraper {
+	name := "itv"
+	url := "http://www.itv.com/presscentre/press-releases"
+	linkSel := `li.views-row .title a`
+
+	title := ".content h1"
+	content := "#block-system-main"
+	pubDate := "#block-system-main .small.date"
+	cruft := ".small.date, .share_links, ul.field-group-format"
 	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
