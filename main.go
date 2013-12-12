@@ -67,6 +67,7 @@ func configure(historical bool) []*prscrape.Scraper {
 		NewIllicitEncountersScraper(),
 		// Media
 		NewBBCScraper(),
+		NewBSkyBScraper(),
 	}
 
 	if historical {
@@ -542,4 +543,20 @@ func NewBBCScraper() *prscrape.Scraper {
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
+}
+
+func NewBSkyBScraper() *prscrape.Scraper {
+	name := "bskyb"
+	url := "http://corporate.sky.com/media/press_releases"
+	linkSel := `.search-results li a`
+
+	title := "#maincontent .boldnospc span"
+	content := "#maincontent div"
+	pubDate := "#maincontent .boldnospc"
+	cruft := ""
+	return &prscrape.Scraper{
+		name,
+		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
 }
