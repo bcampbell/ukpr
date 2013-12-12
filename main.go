@@ -65,6 +65,8 @@ func configure(historical bool) []*prscrape.Scraper {
 
 		// consistant PR placement in news
 		NewIllicitEncountersScraper(),
+		// Media
+		NewBBCScraper(),
 	}
 
 	if historical {
@@ -522,6 +524,21 @@ func NewIllicitEncountersScraper() *prscrape.Scraper {
 	return &prscrape.Scraper{
 		name,
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
+		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
+	}
+}
+
+func NewBBCScraper() *prscrape.Scraper {
+	name := "bbc"
+	feeds := []string{"http://www.bbc.co.uk/mediacentre/search/rss?section=/article/latestnews&sort=associated"}
+
+	title := ".banner h1"
+	content := "#content .sections"
+	pubDate := "" // use date from rss
+	cruft := ""
+	return &prscrape.Scraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
 
