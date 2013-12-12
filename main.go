@@ -69,6 +69,7 @@ func configure(historical bool) []*prscrape.Scraper {
 		NewBBCScraper(),
 		NewBSkyBScraper(),
 		NewITVScraper(),
+		NewChannel5Scraper(),
 	}
 
 	if historical {
@@ -576,4 +577,16 @@ func NewITVScraper() *prscrape.Scraper {
 		prscrape.MustBuildGenericDiscover(name, url, linkSel, false),
 		prscrape.MustBuildGenericScrape(name, title, content, cruft, pubDate),
 	}
+}
+
+func NewChannel5Scraper() *prscrape.Scraper {
+	name := "channel5"
+	feeds := []string{"http://about.channel5.com/press/press-releases/feed"}
+
+	return &prscrape.Scraper{
+		name,
+		prscrape.MustBuildRSSDiscover(name, feeds),
+		nil,
+	}
+
 }
