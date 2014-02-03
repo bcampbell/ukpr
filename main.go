@@ -35,7 +35,7 @@ func configure(historical bool) []*prscrape.Scraper {
 		//		uk.NewRBSScraper(), // needs more work!
 		NewVirginMoneyScraper(),
 		// Hotels
-		NewTravelLodgeScraper(),
+		NewTravelodgeScraper(),
 		// Culture
 		NewTateScraper(),
 		// Government
@@ -53,7 +53,8 @@ func configure(historical bool) []*prscrape.Scraper {
 		NewGreenpeaceUKScraper(),
 		NewShelterScraper(),
 		// political parties
-		NewConservativePartyScraper(),
+		// conservative rss feed causing problems so disabled for now
+		//		NewConservativePartyScraper(),
 		NewGreenPartyScraper(),
 		NewFullRSSScraper("labour.org.uk",
 			[]string{"http://press.labour.org.uk/rss"}),
@@ -255,16 +256,16 @@ func NewMarksAndSpencerScraper() *prscrape.Scraper {
 	}
 }
 
-// scraper to grab press releases from TravelLodge
-func NewTravelLodgeScraper() *prscrape.Scraper {
-	name := "travellodge"
-	url := "http://www.travelodge.co.uk/news/category/press-releases/"
-	linkSel := ".hentry h2 a"
+// scraper to grab press releases from Travelodge
+func NewTravelodgeScraper() *prscrape.Scraper {
+	name := "travelodge"
+	url := "http://www.travelodge.co.uk/press_releases/"
+	linkSel := ".pressReleases h4 a"
 
-	title := ".hentry h1"
-	pubDate := ".hentry .date"
-	content := ".hentry .post-box"
-	cruft := "script, address"
+	title := "#content h2"
+	pubDate := "#content h4"
+	content := "#content"
+	cruft := "#content h2, #content h4"
 
 	return &prscrape.Scraper{
 		name,
